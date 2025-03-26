@@ -142,7 +142,10 @@ def main():
         logger.info(f"  - Total documents processed: {stats['total_documents']}")
         logger.info(f"  - Successfully embedded: {stats['successful_chunks']}")
         logger.info(f"  - Failed to embed: {stats['failed_chunks']}")
-        logger.info(f"  - Total processing time: {stats['processing_time']:.2f} seconds")
+        if stats['processing_time'] is not None:
+            logger.info(f"  - Total processing time: {stats['processing_time']:.2f} seconds")
+        else:
+            logger.info("  - Total processing time: N/A")
         
         return 0
     except Exception as e:

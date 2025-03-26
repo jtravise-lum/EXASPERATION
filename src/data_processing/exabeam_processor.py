@@ -42,12 +42,17 @@ class ExabeamContentProcessor:
             "overview": [self.content_dir / "README.md"],
             "data_sources": [self.content_dir / "Exabeam Data Sources.md"],
             "use_cases": [self.content_dir / "Exabeam Use Cases.md"],
-            "detailed_use_cases": [self.content_dir / "UseCases"],
+            "detailed_use_cases": [self.content_dir],  # If UseCases directly specified
             "product_categories": [self.content_dir / "Exabeam Product Categories.md"],
             "correlation_rules": [self.content_dir / "Exabeam Correlation Rules.md"],
             "data_source_details": [self.content_dir / "DS"],
             "mitre": [self.content_dir / "MitreMap.md"],
         }
+        
+        # Check if we're directly in UseCases directory
+        if self.content_dir.name == "UseCases":
+            logger.info("Detected direct UseCases directory")
+            self.content_map["detailed_use_cases"] = [self.content_dir]
         
         # Files to exclude (if any)
         self.exclude_patterns = [
@@ -95,11 +100,29 @@ class ExabeamContentProcessor:
                     logger.error(f"Error processing {file_path}: {str(e)}")
         
         # Process detailed use cases
-        if (self.content_map["detailed_use_cases"][0]).exists():
-            use_case_dir = self.content_map["detailed_use_cases"][0]
+        use_case_dir = self.content_map["detailed_use_cases"][0]
+        logger.info(f"Checking use case directory: {use_case_dir}")
+        
+        if use_case_dir.exists():
             logger.info(f"Processing use case files from {use_case_dir}")
             try:
-                use_case_docs = self.document_loader.load_directory(use_case_dir)
+                # Check if the directory contains uc_* files directly
+                uc_files = list(use_case_dir.glob("uc_*.md"))
+                if uc_files:
+                    logger.info(f"Found {len(uc_files)} use case files directly in directory")
+                    
+                    # Load each file individually
+                    use_case_docs = []
+                    for file_path in uc_files:
+                        try:
+                            docs = self.document_loader.load_document(file_path)
+                            use_case_docs.extend(docs)
+                        except Exception as file_e:
+                            logger.error(f"Error loading use case file {file_path}: {str(file_e)}")
+                else:
+                    # Try loading the entire directory as usual
+                    use_case_docs = self.document_loader.load_directory(use_case_dir)
+                    
                 # Add document type metadata
                 for doc in use_case_docs:
                     doc.metadata["doc_type"] = "detailed_use_case"
@@ -113,13 +136,14 @@ class ExabeamContentProcessor:
                 # Chunk the documents
                 chunked_docs = self.document_chunker.split_documents(use_case_docs)
                 all_documents.extend(chunked_docs)
-                logger.info(f"Added {len(chunked_docs)} chunks from use case files")
+                logger.info(f"Added {len(chunked_docs)} chunks from {len(use_case_docs)} use case files")
             except Exception as e:
                 logger.error(f"Error processing use case files: {str(e)}")
         
         # Process data source details - these will be numerous
-        if (self.content_map["data_source_details"][0]).exists():
-            ds_dir = self.content_map["data_source_details"][0]
+        ds_dir = self.content_map["data_source_details"][0]
+        logger.info(f"Checking data source directory: {ds_dir}")
+        if ds_dir.exists():
             logger.info(f"Processing data source files from {ds_dir}")
             try:
                 # We'll process the DS directory more selectively to avoid overwhelming the system
