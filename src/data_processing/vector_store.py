@@ -9,8 +9,10 @@ from typing import List, Dict, Any, Optional, Union, Tuple
 from langchain.schema import Document
 from langchain_community.vectorstores import Chroma
 from langchain.vectorstores.base import VectorStore
+from chromadb import Client as ChromaClient
+from chromadb.config import Settings
 
-from src.config import CHROMA_DB_PATH
+from src.config import CHROMA_DB_PATH, CHROMA_SERVER_HOST, CHROMA_SERVER_PORT
 from src.data_processing.embeddings import MultiModalEmbeddingProvider, EmbeddingProvider
 
 logger = logging.getLogger(__name__)
@@ -69,24 +71,34 @@ class VectorDatabase:
         embedding_provider: Union[EmbeddingProvider, MultiModalEmbeddingProvider],
         db_path: str = CHROMA_DB_PATH,
         collection_name: str = "exabeam_docs",
+        use_server: bool = True,
+        server_host: str = CHROMA_SERVER_HOST,
+        server_port: int = CHROMA_SERVER_PORT,
     ):
         """Initialize the vector database.
 
         Args:
             embedding_provider: The embedding provider to use
-            db_path: Path to the database
+            db_path: Path to the database for persistent storage
             collection_name: Name of the collection
+            use_server: Whether to use ChromaDB server mode (vs. local mode)
+            server_host: ChromaDB server host when in server mode
+            server_port: ChromaDB server port when in server mode
         """
         self.embedding_provider = embedding_provider
         self.db_path = db_path
         self.collection_name = collection_name
+        self.use_server = use_server
+        self.server_host = server_host
+        self.server_port = server_port
         self.vectorstore = None
 
         # Create a custom embedding function that works with our multi-modal provider
         self.embedding_function = CustomEmbeddingFunction(embedding_provider)
 
-        # Ensure the database directory exists
-        os.makedirs(db_path, exist_ok=True)
+        # Ensure the database directory exists when using persistent storage
+        if not use_server:
+            os.makedirs(db_path, exist_ok=True)
 
         # Initialize or load the database
         self._init_vectorstore()
@@ -94,12 +106,27 @@ class VectorDatabase:
     def _init_vectorstore(self) -> None:
         """Initialize or load the vector store."""
         try:
-            logger.info(f"Initializing vector database at {self.db_path}")
-            self.vectorstore = Chroma(
-                collection_name=self.collection_name,
-                embedding_function=self.embedding_function,
-                persist_directory=self.db_path,
-            )
+            if self.use_server:
+                logger.info(f"Connecting to ChromaDB server at {self.server_host}:{self.server_port}")
+                client = ChromaClient(
+                    Settings(
+                        chroma_server_host=self.server_host,
+                        chroma_server_http_port=self.server_port
+                    )
+                )
+                self.vectorstore = Chroma(
+                    collection_name=self.collection_name,
+                    embedding_function=self.embedding_function,
+                    client=client
+                )
+            else:
+                logger.info(f"Initializing local ChromaDB at {self.db_path}")
+                self.vectorstore = Chroma(
+                    collection_name=self.collection_name,
+                    embedding_function=self.embedding_function,
+                    persist_directory=self.db_path,
+                )
+            
             count = self.vectorstore._collection.count()
             logger.info(f"Vector database initialized with {count} documents")
         except Exception as e:
@@ -140,7 +167,10 @@ class VectorDatabase:
                 ids=ids
             )
             
-            self.vectorstore.persist()
+            # Persist if using local mode
+            if not self.use_server:
+                self.vectorstore.persist()
+                
             logger.info(f"Added {len(ids)} documents to vector database")
             return ids
         except Exception as e:

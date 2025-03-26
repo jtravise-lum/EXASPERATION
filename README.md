@@ -38,21 +38,52 @@ EXASPERATION uses a modular architecture consisting of:
 
 ### Installation
 
+#### Component Architecture
+
+EXASPERATION consists of two main components that can be run separately:
+
+1. **ChromaDB Vector Database** - Runs in Docker
+2. **Embedding and Query Pipeline** - Runs in Python virtual environment
+
+This separation allows for more flexibility and better compatibility with different Python versions.
+
+#### Option 1: Using Docker for ChromaDB (Recommended)
+
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/exasperation.git
 cd exasperation
 
-# Create a virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Start ChromaDB with Docker
+docker-compose up -d
+```
 
-# Install dependencies
-pip install -r requirements.txt
+#### Option 2: Setting up the Embedding Pipeline
+
+```bash
+# Create a dedicated virtual environment
+python -m venv chromadb_venv
+source chromadb_venv/bin/activate  # On Windows: chromadb_venv\Scripts\activate
+
+# Copy example env file and configure
+cp .env.example .env
+# Edit .env to add your API keys
+
+# Install minimal dependencies for embedding
+pip install -r chromadb.requirements.txt
 
 # Initialize the database (this will download and process documentation)
-python initialize_db.py
+python -m src.initialize_db
 ```
+
+For local ChromaDB installation (not recommended), set `use_server=False` when initializing the VectorDatabase class.
+
+#### Important Notes
+
+- The `chromadb.requirements.txt` file contains only the minimal dependencies needed for the embedding pipeline
+- Docker Compose should be installed at the system level, not in the virtual environment
+- The Python embedding pipeline is in a separate environment (chromadb_venv) from any web UI components
+- Python 3.12+ may have compatibility issues with some packages - use Python 3.10-3.11 for best results
 
 ### Usage
 

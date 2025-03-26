@@ -4,6 +4,7 @@ import logging
 import os
 import time
 import requests
+import concurrent.futures
 from typing import List, Dict, Any, Optional, Union, Tuple
 
 from langchain.embeddings.base import Embeddings
@@ -173,20 +174,24 @@ class MultiModalEmbeddingProvider:
     def __init__(
         self,
         model_config: Optional[Dict[str, str]] = None,
-        default_model: Optional[str] = None
+        default_model: Optional[str] = None,
+        max_workers: int = 4
     ):
         """Initialize the multi-modal embedding provider.
 
         Args:
             model_config: Map of content types to model names
             default_model: Default model to use
+            max_workers: Maximum number of parallel workers for embedding
         """
         self.model_config = model_config or EMBEDDING_MODELS
         self.default_model = default_model or DEFAULT_EMBEDDING_MODEL
         self.embeddings_cache = {}
+        self.max_workers = max_workers
         
         logger.info(f"Initializing multi-modal embedding provider with models: {self.model_config}")
         logger.info(f"Default model: {self.default_model}")
+        logger.info(f"Using {self.max_workers} parallel workers for embedding")
         
         # Initialize models
         for content_type, model_name in self.model_config.items():
@@ -221,7 +226,7 @@ class MultiModalEmbeddingProvider:
         return self.model_config.get("text", self.default_model)
     
     def embed_documents(self, documents: List[Document]) -> List[Tuple[List[float], Document]]:
-        """Embed a list of documents using the appropriate model for each.
+        """Embed a list of documents using the appropriate model for each, with parallel processing.
 
         Args:
             documents: List of documents to embed
@@ -241,34 +246,63 @@ class MultiModalEmbeddingProvider:
                 model_docs[model_name] = []
             model_docs[model_name].append((i, doc))
         
-        # Create embeddings using each model
+        # Create embeddings using each model with parallel processing
         result_embeddings = [None] * len(documents)
         
-        for model_name, doc_list in model_docs.items():
+        # Function to process a batch of documents with a specific model
+        def process_batch(batch_data):
+            model_name, batch_indices, batch_docs, batch_texts = batch_data
             embedder = self.embeddings_cache[model_name]
+            
+            try:
+                batch_embeddings = embedder.embed_documents(batch_texts)
+                # Return successful results
+                return [(idx, embedding, doc, model_name, None) 
+                        for idx, embedding, doc in zip(batch_indices, batch_embeddings, batch_docs)]
+            except Exception as e:
+                # Return error to be handled later
+                return [(idx, None, doc, model_name, str(e)) 
+                        for idx, doc in zip(batch_indices, batch_docs)]
+        
+        # Prepare batches for parallel processing
+        all_batches = []
+        for model_name, doc_list in model_docs.items():
             indices = [item[0] for item in doc_list]
             docs = [item[1] for item in doc_list]
             texts = [doc.page_content for doc in docs]
             
-            logger.info(f"Embedding {len(texts)} documents with model {model_name}")
-            
-            try:
-                embeddings = embedder.embed_documents(texts)
+            # Create smaller sub-batches for better parallelism
+            sub_batch_size = 10  # Adjust based on your needs
+            for i in range(0, len(indices), sub_batch_size):
+                batch_indices = indices[i:i+sub_batch_size]
+                batch_docs = docs[i:i+sub_batch_size]
+                batch_texts = texts[i:i+sub_batch_size]
                 
-                # Store results in the original order
-                for idx, embedding, doc in zip(indices, embeddings, docs):
+                all_batches.append((model_name, batch_indices, batch_docs, batch_texts))
+        
+        logger.info(f"Processing {len(documents)} documents in {len(all_batches)} parallel batches with {self.max_workers} workers")
+        
+        # Process batches in parallel
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            batch_results = list(executor.map(process_batch, all_batches))
+        
+        # Flatten results and handle errors
+        for batch_result in batch_results:
+            for idx, embedding, doc, model_name, error in batch_result:
+                if error is None:
+                    # Successful embedding
                     result_embeddings[idx] = (embedding, doc)
-                    
-            except Exception as e:
-                logger.error(f"Error embedding with model {model_name}: {str(e)}")
-                # Try with default model as fallback
-                if model_name != self.default_model:
-                    logger.info(f"Falling back to default model {self.default_model}")
-                    default_embedder = self.embeddings_cache[self.default_model]
-                    fallback_embeddings = default_embedder.embed_documents(texts)
-                    
-                    for idx, embedding, doc in zip(indices, fallback_embeddings, docs):
-                        result_embeddings[idx] = (embedding, doc)
+                else:
+                    # Handle error with fallback
+                    logger.error(f"Error embedding document with model {model_name}: {error}")
+                    if model_name != self.default_model:
+                        logger.info(f"Falling back to default model {self.default_model}")
+                        try:
+                            default_embedder = self.embeddings_cache[self.default_model]
+                            fallback_embedding = default_embedder.embed_documents([doc.page_content])[0]
+                            result_embeddings[idx] = (fallback_embedding, doc)
+                        except Exception as fallback_error:
+                            logger.error(f"Fallback embedding also failed: {str(fallback_error)}")
         
         # Filter out any None values (should not happen with fallback)
         return [item for item in result_embeddings if item is not None]

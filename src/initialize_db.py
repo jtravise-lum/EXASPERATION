@@ -5,12 +5,15 @@ import argparse
 import logging
 import os
 import sys
+import json
 from pathlib import Path
 
-from src.config import CHROMA_DB_PATH
-from src.data_processing.embeddings import EmbeddingProvider
-from src.data_processing.exabeam_processor import ExabeamContentProcessor
-from src.data_processing.vector_store import VectorDatabase
+from src.config import (
+    CHROMA_DB_PATH, 
+    CHROMA_SERVER_HOST, 
+    CHROMA_SERVER_PORT
+)
+from src.data_processing.exabeam_ingestion import ExabeamIngestionPipeline
 
 # Configure logging
 logging.basicConfig(
@@ -38,9 +41,56 @@ def parse_args():
         help=f"Path to the vector database (default: {CHROMA_DB_PATH})",
     )
     parser.add_argument(
+        "--collection-name",
+        type=str,
+        default="exabeam_docs",
+        help="Name of the vector database collection",
+    )
+    parser.add_argument(
         "--reset",
         action="store_true",
         help="Reset the database before initialization",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=50,
+        help="Number of documents to process in each batch",
+    )
+    parser.add_argument(
+        "--use-server",
+        action="store_true",
+        default=True,
+        help="Use ChromaDB server mode (default: True)",
+    )
+    parser.add_argument(
+        "--server-host",
+        type=str,
+        default=CHROMA_SERVER_HOST,
+        help=f"ChromaDB server host (default: {CHROMA_SERVER_HOST})",
+    )
+    parser.add_argument(
+        "--server-port",
+        type=int,
+        default=CHROMA_SERVER_PORT,
+        help=f"ChromaDB server port (default: {CHROMA_SERVER_PORT})",
+    )
+    parser.add_argument(
+        "--verify",
+        action="store_true",
+        help="Verify the ingestion with a test query",
+    )
+    parser.add_argument(
+        "--stats-file",
+        type=str,
+        default="ingestion_stats.json",
+        help="File to write ingestion statistics to",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=4,
+        help="Number of parallel workers for embedding process",
     )
     return parser.parse_args()
 
@@ -51,44 +101,49 @@ def main():
 
     logger.info(f"Initializing database at {args.db_path}")
     logger.info(f"Using content from {args.content_dir}")
+    logger.info(f"Collection name: {args.collection_name}")
+    logger.info(f"Using server mode: {args.use_server}")
+    if args.use_server:
+        logger.info(f"Server host: {args.server_host}")
+        logger.info(f"Server port: {args.server_port}")
+    logger.info(f"Batch size: {args.batch_size}")
+    logger.info(f"Reset database: {args.reset}")
 
     try:
-        # Initialize embedding provider
-        embedding_provider = EmbeddingProvider()
-        logger.info(f"Initialized embedding provider using {embedding_provider.model_name}")
-
-        # Initialize vector database
-        vector_db = VectorDatabase(
-            embedding_provider=embedding_provider,
-            db_path=args.db_path,
-        )
-        logger.info(f"Initialized vector database at {args.db_path}")
-
-        # Reset database if requested
-        if args.reset:
-            logger.warning("Resetting vector database")
-            vector_db.delete_collection()
-            logger.info("Vector database reset completed")
-
-        # Process and ingest Exabeam content
-        content_processor = ExabeamContentProcessor(
+        # Initialize the ingestion pipeline
+        pipeline = ExabeamIngestionPipeline(
             content_dir=args.content_dir,
+            db_path=args.db_path,
+            collection_name=args.collection_name,
+            use_server=args.use_server,
+            server_host=args.server_host,
+            server_port=args.server_port,
+            batch_size=args.batch_size,
+            max_threads=args.workers,
         )
-        logger.info("Beginning content processing")
         
-        # Process content and get document chunks
-        documents = content_processor.process_content()
-        logger.info(f"Processed {len(documents)} document chunks")
-
-        # Add documents to vector database
-        if documents:
-            logger.info(f"Adding {len(documents)} documents to vector database")
-            vector_db.add_documents(documents)
-            logger.info("Content ingestion completed successfully")
-        else:
-            logger.warning("No documents to add to the vector database")
-
-        logger.info("Database initialization completed successfully")
+        # Run the ingestion pipeline
+        stats = pipeline.run(reset_db=args.reset)
+        
+        # Save statistics to file
+        if args.stats_file:
+            stats_path = os.path.join(Path(__file__).parent.parent, args.stats_file)
+            with open(stats_path, 'w') as f:
+                json.dump(stats, f, indent=2)
+            logger.info(f"Saved ingestion statistics to {stats_path}")
+        
+        # Verify ingestion if requested
+        if args.verify:
+            logger.info("Verifying ingestion with test query")
+            results = pipeline.verify_ingestion("Exabeam security use cases")
+            logger.info(f"Retrieved {len(results)} documents")
+        
+        logger.info(f"Database initialization completed successfully. Summary:")
+        logger.info(f"  - Total documents processed: {stats['total_documents']}")
+        logger.info(f"  - Successfully embedded: {stats['successful_chunks']}")
+        logger.info(f"  - Failed to embed: {stats['failed_chunks']}")
+        logger.info(f"  - Total processing time: {stats['processing_time']:.2f} seconds")
+        
         return 0
     except Exception as e:
         logger.error(f"Error initializing database: {str(e)}", exc_info=True)

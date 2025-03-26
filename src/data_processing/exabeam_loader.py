@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Union, Tuple
 
 from langchain.schema import Document
-from langchain.document_loaders import TextLoader
+from langchain_community.document_loaders import TextLoader
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,149 @@ class ExabeamDocumentLoader:
         self.usecase_pattern = re.compile(r"Use-Case:\s+\[(.*?)\]")
         self.mitre_pattern = re.compile(r"MITRE ATT&CK® TTP[s]?[:\s]+(.*?)(?=\n\n|\Z)")
 
+    def load_document(self, file_path: Union[str, Path]) -> List[Document]:
+        """Load a document from a file path and extract its content.
+
+        Args:
+            file_path: Path to the document file
+
+        Returns:
+            List of Document objects with content and metadata
+        """
+        file_path = Path(file_path) if isinstance(file_path, str) else file_path
+        
+        if not file_path.exists():
+            raise FileNotFoundError(f"File {file_path} does not exist")
+            
+        # Select the appropriate loader based on file extension
+        extension = file_path.suffix.lower()
+        if extension == ".md":
+            # Use markdown loader for Exabeam content
+            try:
+                from langchain_community.document_loaders import UnstructuredMarkdownLoader
+                loader = UnstructuredMarkdownLoader(str(file_path))
+            except ImportError:
+                # Fall back to text loader if unstructured is not installed
+                logger.warning(f"UnstructuredMarkdownLoader not available, falling back to TextLoader for {file_path}")
+                loader = TextLoader(str(file_path))
+        else:
+            # Default to text loader for other formats
+            loader = TextLoader(str(file_path))
+            
+        try:
+            # Load the document
+            documents = loader.load()
+            
+            # Extract and add metadata
+            for doc in documents:
+                metadata = self._extract_metadata_from_content(doc.page_content, file_path)
+                doc.metadata.update(metadata)
+                
+            return documents
+        except Exception as e:
+            logger.error(f"Error loading document {file_path}: {str(e)}")
+            # Return empty list on error
+            return []
+            
+    def load_directory(self, directory_path: Union[str, Path]) -> List[Document]:
+        """Load all documents from a directory.
+
+        Args:
+            directory_path: Path to the directory
+
+        Returns:
+            List of Document objects with content and metadata
+        """
+        directory_path = Path(directory_path) if isinstance(directory_path, str) else directory_path
+        
+        if not directory_path.exists() or not directory_path.is_dir():
+            raise ValueError(f"Invalid directory: {directory_path}")
+            
+        documents = []
+        for file_path in directory_path.glob("**/*"):
+            if file_path.is_file() and file_path.suffix.lower() in [".md", ".txt"]:
+                try:
+                    docs = self.load_document(file_path)
+                    documents.extend(docs)
+                except Exception as e:
+                    logger.error(f"Error loading document {file_path}: {str(e)}")
+                    
+        return documents
+    
+    def _extract_metadata_from_content(self, content: str, file_path: Path) -> Dict[str, Any]:
+        """Extract metadata from document content and path.
+        
+        Args:
+            content: Document content
+            file_path: Path to the document file
+            
+        Returns:
+            Dictionary of metadata extracted from content
+        """
+        metadata = {
+            "source": str(file_path),
+            "file_name": file_path.name,
+            "file_type": file_path.suffix[1:] if file_path.suffix else "",
+        }
+        
+        # Add relative path to content directory
+        try:
+            rel_path = file_path.relative_to(self.content_dir)
+            metadata["relative_path"] = str(rel_path)
+        except ValueError:
+            metadata["relative_path"] = str(file_path)
+        
+        # Determine document type from path
+        if "DS" in str(file_path):
+            metadata["doc_type"] = "data_source"
+            
+            # Extract vendor and product from path
+            path_parts = file_path.parts
+            ds_index = path_parts.index("DS") if "DS" in path_parts else -1
+            
+            if ds_index >= 0 and ds_index + 1 < len(path_parts):
+                metadata["vendor"] = path_parts[ds_index + 1]
+                
+            if ds_index >= 0 and ds_index + 2 < len(path_parts):
+                metadata["product"] = path_parts[ds_index + 2]
+                
+            # Check for parser or rule/model
+            if "Ps" in str(file_path):
+                metadata["content_type"] = "parser"
+            elif "RM" in str(file_path):
+                metadata["content_type"] = "rule_model"
+            else:
+                metadata["content_type"] = "data_source_overview"
+                
+        elif "UseCases" in str(file_path):
+            metadata["doc_type"] = "use_case"
+            
+            # Extract use case name from filename
+            if file_path.name.startswith("uc_") and file_path.name.endswith(".md"):
+                use_case_name = file_path.name[3:-3].replace("_", " ")
+                metadata["use_case_name"] = use_case_name
+        
+        # Extract metadata from content patterns
+        vendor_match = self.vendor_pattern.search(content)
+        if vendor_match:
+            metadata["vendor"] = vendor_match.group(1).strip()
+            
+        product_match = self.product_pattern.search(content)
+        if product_match:
+            metadata["product"] = product_match.group(1).strip()
+            
+        usecase_match = self.usecase_pattern.search(content)
+        if usecase_match:
+            usecases = usecase_match.group(1).strip()
+            metadata["use_cases"] = [uc.strip() for uc in usecases.split(",")]
+            
+        mitre_match = self.mitre_pattern.search(content)
+        if mitre_match:
+            mitre_ids = mitre_match.group(1).strip()
+            metadata["mitre_attack"] = [mid.strip() for mid in mitre_ids.split(",")]
+        
+        return metadata
+        
     def load_documents(self, categories: Optional[List[str]] = None) -> List[Document]:
         """Load all documents from specified categories.
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-EXASPERATION (Exabeam Automated Search Assistant Preventing Exasperating Research And Time-wasting In Official Notes) is a Retrieval Augmented Generation (RAG) system designed to make Exabeam's extensive documentation accessible through natural language queries.
+EXASPERATION (Exabeam Automated Search Assistant Preventing Exasperating Research And Time-wasting In Official Notes) is a Retrieval Augmented Generation (RAG) system designed to make Exabeam's extensive documentation accessible through natural language queries. This document details the technical implementation of the system, focusing on the core components and architectural decisions.
 
 ## Core Components
 
@@ -29,22 +29,35 @@ We've implemented a specialized document processing system for the Exabeam Conte
 
 ### Vector Database and Embeddings
 
-We use a dual-model approach with Voyage AI for embeddings:
+We use a dual-model approach with Voyage AI for embeddings, with parallel processing for improved performance:
 
 1. **MultiModalEmbeddingProvider**: Selects the appropriate embedding model based on content
    - `voyage-3-large`: For natural language documentation, use cases, explanations
    - `voyage-code-3`: For structured data formats, parsers, and implementation details
    - Intelligently routes documents to the best model based on content and metadata
    - Handles fallback and error recovery
+   - Implements multi-threaded parallel processing with configurable worker count
+   - Uses thread pools to process multiple document batches concurrently
+   - Optimizes embedding operations for maximum throughput
 
 2. **CustomEmbeddingFunction**: Integrates multi-modal embeddings with Chroma DB
    - Maintains document metadata during embedding
    - Ensures proper model selection during both indexing and search
+   - Preserves content-aware embedding model selection
 
 3. **VectorDatabase**: Manages the Chroma vector database
+   - Docker-based deployment with persistent storage
+   - Flexible configuration for server or local mode
    - Handles document addition and retrieval
    - Supports filtered searches and relevance scoring
-   - Manages collection lifecycle
+   - Manages collection lifecycle with reset capability
+   - Provides connection strategies for both Docker and local environments
+
+4. **ExabeamIngestionPipeline**: Orchestrates the end-to-end ingestion process
+   - Manages document loading, chunking, embedding, and storage
+   - Implements efficient batch processing with configurable sizes
+   - Provides detailed progress tracking and statistics
+   - Handles error recovery and reporting
 
 ## Implementation Status
 

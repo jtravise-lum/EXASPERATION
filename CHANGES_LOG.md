@@ -1,5 +1,26 @@
 # EXASPERATION Changes Log
 
+## 2025-03-26 23:30 - Document Ingestion Implementation
+- Created ExabeamIngestionPipeline class for document processing and embedding
+- Implemented batch processing with progress tracking
+- Added error handling and individual document fallback for failed batches
+- Enhanced initialize_db.py script with additional options
+- Added ingestion statistics collection and reporting
+
+## 2025-03-27 00:45 - Embedding Pipeline Configuration
+- Created dedicated virtual environment for embedding (chromadb_venv)
+- Simplified and renamed requirements file to chromadb.requirements.txt
+- Updated setup script to handle different Python versions
+- Separated ChromaDB Docker setup from Python environment
+- Added documentation for component architecture
+
+## 2025-03-26 22:15 - Database Setup
+- Added Docker Compose configuration for ChromaDB
+- Updated vector_store.py to support both server and local ChromaDB modes
+- Added server connection settings to configuration
+- Updated environment variables for ChromaDB connection
+- Configured persistent storage path for ChromaDB data
+
 ## 2025-03-26 21:35 - Checklist Correction
 - Updated Vector Database section in IMPLEMENTATION_CHECKLIST.md
 - Marked Chroma DB integration as pending

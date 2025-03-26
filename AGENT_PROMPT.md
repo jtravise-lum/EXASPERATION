@@ -10,13 +10,14 @@ The system processes the Exabeam Content-Library-CIM2 repository (https://github
 
 The project has three major components, with varying levels of completion:
 
-1. **Document Ingestion** (80% complete)
+1. **Document Ingestion** (85% complete)
    - Document loading with specialized metadata extraction ✅
    - Content-specific preprocessing by document type ✅
    - Advanced chunking strategies based on document structure ✅
    - Dual-model embedding system design ✅
    - Vector database interface design ✅
-   - Actual ChromaDB integration ⏳ (next priority)
+   - ChromaDB Docker setup and configuration ✅
+   - Document ingestion pipeline ⏳ (next priority)
 
 2. **Query Processing and Search** (0% complete)
    - Query preprocessing and expansion ⏳
@@ -63,21 +64,31 @@ We're using a dual-model approach with Voyage AI:
 
 ### Vector Database
 
-We've designed (but not yet implemented) a vector database integration with:
+We've implemented the ChromaDB integration with:
 
-1. **ChromaDB** as the vector store
-2. **Custom embedding function** that works with our multi-modal approach
-3. **Rich metadata filtering** for targeted search
+1. **Docker Compose setup** for ChromaDB
+   - Persistent volume mounting for data storage
+   - Containerized deployment with health checks
+
+2. **Dual-mode support** in VectorDatabase class
+   - Server mode: Connects to ChromaDB server instance
+   - Local mode: Uses direct file-based persistence
+
+3. **Custom embedding function** that works with our multi-modal approach
+   - Routes documents to appropriate embedding model based on content type
+   - Handles metadata-aware embedding creation
+
+4. **Rich metadata filtering** for targeted search
 
 ## Immediate Next Steps
 
 ### Your priority tasks are:
 
-1. **Complete ChromaDB integration**
-   - Implement the actual integration with ChromaDB
-   - Set up persistence and connection management
-   - Create the document ingestion pipeline
+1. **Complete document ingestion pipeline**
+   - Implement the ExabeamIngestionPipeline class
+   - Create efficient batching for large document collections
    - Build initialization and testing scripts
+   - Set up progress tracking and reporting
 
 2. **Implement query processing**
    - Create query preprocessing module
@@ -91,6 +102,7 @@ We've designed (but not yet implemented) a vector database integration with:
 - `src/retrieval/`: Query processing, search, and reranking (partially implemented)
 - `src/llm_integration/`: LLM interface (placeholder only)
 - `documentation/`: Project plans and specifications
+- `docker-compose.yml`: Docker configuration for ChromaDB
 
 ## Key Files to Review
 
@@ -104,10 +116,12 @@ We've designed (but not yet implemented) a vector database integration with:
    - `src/data_processing/exabeam_preprocessor.py`: Content cleaning strategies
    - `src/data_processing/exabeam_chunker.py`: Document chunking logic
    - `src/data_processing/embeddings.py`: Dual-model embedding implementation
-   - `src/data_processing/vector_store.py`: Vector database interface design
+   - `src/data_processing/vector_store.py`: Vector database implementation with server/client modes
+   - `docker-compose.yml`: ChromaDB Docker configuration
 
 3. Check configuration:
-   - `src/config.py`: System configuration and environment setup
+   - `src/config.py`: System configuration with ChromaDB settings
+   - `.env.example`: Template for environment variables
 
 ## Development Guidelines
 
@@ -130,15 +144,21 @@ We've designed (but not yet implemented) a vector database integration with:
    - Validate user inputs before processing
    - Sanitize content before displaying to users
 
+4. **Docker integration**:
+   - Ensure all components work well with containerization
+   - Default to using the Docker ChromaDB server
+   - Support local mode as a fallback option
+
 ## Testing Your Implementation
 
 1. The repository contains the Exabeam Content-Library-CIM2 in `data/content-library-cim2/`
-2. After implementing ChromaDB, you can test on a small subset of the documentation
+2. Start the ChromaDB server with Docker Compose before running tests
 3. For query processing, start with testing on use case documents which have clear relationships
 
 ## Resources and Dependencies
 
 - Python 3.8+ required
+- Docker and Docker Compose for ChromaDB
 - See `requirements.txt` for all Python dependencies
 - You'll need Voyage AI API keys for embedding (stored in .env file)
 - You'll need Claude API keys for response generation (stored in .env file)
@@ -152,5 +172,6 @@ Your implementation will be successful if it:
 3. Supports metadata-filtered vector search
 4. Processes natural language queries with appropriate expansion
 5. Returns relevant document chunks with proper context
+6. Works seamlessly with the Docker ChromaDB setup
 
-Remember, the priority is creating a working document ingestion pipeline with ChromaDB integration, followed by query processing functionality. Focus on these areas before moving to LLM integration.
+Remember, the priority is creating a working document ingestion pipeline with the Docker ChromaDB integration, followed by query processing functionality. Focus on these areas before moving to LLM integration.
