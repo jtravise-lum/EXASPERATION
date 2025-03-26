@@ -19,7 +19,7 @@
 - [ ] Set up embedding quality monitoring
 
 ## Vector Database
-- [x] Configure Chroma DB integration
+- [ ] Configure Chroma DB integration
 - [x] Set up custom embedding function for multi-model support
 - [x] Implement metadata-based filtering
 - [ ] Configure persistence storage optimization
