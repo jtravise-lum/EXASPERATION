@@ -4,7 +4,7 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Union
 from tqdm import tqdm
 
 from langchain.schema import Document
@@ -93,6 +93,55 @@ class ExabeamIngestionPipeline:
             "processing_time": None,
         }
 
+    def _sanitize_metadata_for_chroma(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Sanitize metadata to ensure compatibility with ChromaDB.
+        
+        ChromaDB only supports str, int, float, or bool as metadata values.
+        This function converts any other types to strings.
+        
+        Args:
+            metadata: Document metadata
+            
+        Returns:
+            Sanitized metadata compatible with ChromaDB
+        """
+        if not metadata:
+            return {}
+            
+        sanitized = {}
+        for key, value in metadata.items():
+            # Skip None values
+            if value is None:
+                continue
+                
+            # Convert lists to comma-separated strings
+            if isinstance(value, (list, tuple)):
+                sanitized[key] = ", ".join(str(item) for item in value)
+            # Convert dicts to JSON-like strings
+            elif isinstance(value, dict):
+                sanitized[key] = str(value)
+            # Pass through scalar types supported by ChromaDB
+            elif isinstance(value, (str, int, float, bool)):
+                sanitized[key] = value
+            # Convert anything else to string
+            else:
+                sanitized[key] = str(value)
+                
+        return sanitized
+        
+    def _sanitize_documents_for_chroma(self, documents: List[Document]) -> List[Document]:
+        """Sanitize document metadata for ChromaDB compatibility.
+        
+        Args:
+            documents: List of documents to sanitize
+            
+        Returns:
+            Documents with sanitized metadata
+        """
+        for doc in documents:
+            doc.metadata = self._sanitize_metadata_for_chroma(doc.metadata)
+        return documents
+        
     def run(self, reset_db: bool = False) -> Dict[str, Any]:
         """Run the ingestion pipeline.
 
@@ -121,6 +170,10 @@ class ExabeamIngestionPipeline:
             if not documents:
                 logger.warning("No documents to ingest")
                 return self.stats
+                
+            # Sanitize document metadata for ChromaDB compatibility
+            logger.info("Sanitizing document metadata for ChromaDB compatibility")
+            documents = self._sanitize_documents_for_chroma(documents)
             
             # Ingest documents in batches
             logger.info(f"Ingesting documents in batches of {self.batch_size}")
@@ -169,7 +222,11 @@ class ExabeamIngestionPipeline:
                     logger.info("Attempting to process failed batch documents individually")
                     for doc in batch:
                         try:
-                            self.vector_db.add_documents([doc])
+                            # Sanitize individual document metadata to ensure compatibility
+                            sanitized_doc = doc.copy()
+                            sanitized_doc.metadata = self._sanitize_metadata_for_chroma(doc.metadata)
+                            
+                            self.vector_db.add_documents([sanitized_doc])
                             self.stats["successful_chunks"] += 1
                             self.stats["failed_chunks"] -= 1  # Correct the count
                             logger.info(f"Successfully added individual document")

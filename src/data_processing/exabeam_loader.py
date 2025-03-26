@@ -179,12 +179,14 @@ class ExabeamDocumentLoader:
         usecase_match = self.usecase_pattern.search(content)
         if usecase_match:
             usecases = usecase_match.group(1).strip()
-            metadata["use_cases"] = [uc.strip() for uc in usecases.split(",")]
+            # Store as comma-separated string instead of list for ChromaDB compatibility
+            metadata["use_cases"] = ", ".join(uc.strip() for uc in usecases.split(","))
             
         mitre_match = self.mitre_pattern.search(content)
         if mitre_match:
             mitre_ids = mitre_match.group(1).strip()
-            metadata["mitre_attack"] = [mid.strip() for mid in mitre_ids.split(",")]
+            # Store as comma-separated string instead of list for ChromaDB compatibility
+            metadata["mitre_attack"] = ", ".join(mid.strip() for mid in mitre_ids.split(","))
         
         return metadata
         
@@ -346,4 +348,5 @@ class ExabeamDocumentLoader:
             mitre_text = mitre_match.group(1).strip()
             ttps = [ttp.strip() for ttp in re.split(r'<br>|,', mitre_text) if ttp.strip()]
             if ttps:
-                document.metadata["mitre_ttps"] = ttps
+                # Store as comma-separated string instead of list for ChromaDB compatibility
+                document.metadata["mitre_ttps"] = ", ".join(ttps)
