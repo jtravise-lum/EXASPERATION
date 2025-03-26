@@ -1,5 +1,3 @@
-Here's a README file for your EXASPERATION project:
-
 # EXASPERATION
 
 **Exabeam Automated Search Assistant Preventing Exasperating Research And Time-wasting In Official Notes**
