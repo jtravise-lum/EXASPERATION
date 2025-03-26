@@ -13,7 +13,7 @@ apt install -y \
 echo "Locking down SSH (no root login, no password auth)..."
 sed -i 's/^PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
 sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
-systemctl reload sshd
+systemctl reload ssh
 
 echo "Configuring UFW..."
 ufw default deny incoming
