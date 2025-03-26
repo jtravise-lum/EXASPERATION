@@ -19,7 +19,7 @@
 ## Phase 2: Data Processing Pipeline
 
 ### Document Ingestion
-- Create document loader module supporting multiple formats (PDF, DOCX, MD, TXT)
+- Create document loader supporting content in https://github.com/ExabeamLabs/Content-Library-CIM2/
 - Implement document metadata extraction
 - Build document cleaning and preprocessing pipeline
 - Develop chunking strategies (semantic, fixed-size, sliding window)
