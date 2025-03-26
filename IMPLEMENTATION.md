@@ -52,6 +52,9 @@ We use a dual-model approach with Voyage AI for embeddings, with parallel proces
    - Supports filtered searches and relevance scoring
    - Manages collection lifecycle with reset capability
    - Provides connection strategies for both Docker and local environments
+   - Implements version compatibility for ChromaDB APIs (0.4.x through 0.6.0)
+   - Uses robust error handling and retry mechanisms for server operations
+   - Includes fallback strategies for API differences between versions
 
 4. **ExabeamIngestionPipeline**: Orchestrates the end-to-end ingestion process
    - Manages document loading, chunking, embedding, and storage

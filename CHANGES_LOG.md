@@ -1,5 +1,13 @@
 # EXASPERATION Changes Log
 
+## 2025-03-26 22:55 - ChromaDB Version Compatibility Fix
+- Fixed compatibility issues with ChromaDB 0.6.0 API changes
+- Updated collection handling for the new list_collections API format
+- Added error handling for the removed _api.flush() method
+- Implemented better collection existence checking with fallbacks
+- Improved error handling for ingestion failures
+- Tested document ingestion with actual content library
+
 ## 2025-03-26 23:30 - Document Ingestion Implementation
 - Created ExabeamIngestionPipeline class for document processing and embedding
 - Implemented batch processing with progress tracking

@@ -108,45 +108,89 @@ class VectorDatabase:
         try:
             if self.use_server:
                 logger.info(f"Connecting to ChromaDB server at {self.server_host}:{self.server_port}")
-                client = ChromaClient(
-                    Settings(
-                        chroma_server_host=self.server_host,
-                        chroma_server_http_port=self.server_port
-                    )
+                
+                # Use the HttpClient directly for better control over server connection
+                from chromadb import HttpClient
+                client = HttpClient(
+                    host=self.server_host,
+                    port=self.server_port
                 )
                 
-                # First check if collection exists, and create it if needed
-                collections = client.list_collections()
-                collection_exists = False
-                
-                for coll_info in collections:
-                    # Handle different versions of ChromaDB API
-                    if hasattr(coll_info, 'name'):
-                        coll_name = coll_info.name
-                    elif isinstance(coll_info, dict) and 'name' in coll_info:
-                        coll_name = coll_info['name']
-                    else:
-                        # If it's just a string or other object, convert to string
-                        coll_name = str(coll_info)
-                        
-                    if coll_name == self.collection_name:
-                        collection_exists = True
+                # Check if collection exists - ChromaDB v0.6.0 changes
+                logger.info("Listing all collections")
+                try:
+                    collections = client.list_collections()
+                    logger.info(f"Found collections: {collections}")
+                    collection_exists = self.collection_name in collections
+                    
+                    if collection_exists:
                         logger.info(f"Found existing collection: {self.collection_name}")
-                        break
+                except Exception as e:
+                    logger.warning(f"Error listing collections: {str(e)}")
+                    # Try to get the collection directly as a fallback
+                    try:
+                        client.get_collection(name=self.collection_name)
+                        collection_exists = True
+                        logger.info(f"Collection {self.collection_name} exists (verified by direct access)")
+                    except Exception as get_err:
+                        logger.info(f"Collection {self.collection_name} does not exist: {str(get_err)}")
+                        collection_exists = False
                 
                 if not collection_exists:
                     logger.info(f"Creating new collection: {self.collection_name}")
                     try:
-                        # Explicitly create the collection
-                        client.create_collection(
-                            name=self.collection_name,
-                            embedding_function=self.embedding_function
-                        )
+                        # Create the collection with direct client
+                        client.create_collection(name=self.collection_name)
                         logger.info(f"Collection created successfully: {self.collection_name}")
+                        
+                        # Give the server more time to process this request
+                        import time
+                        time.sleep(5.0)  # Increased wait time
+                        
                     except Exception as create_err:
-                        logger.warning(f"Collection creation failed, may already exist: {str(create_err)}")
+                        logger.warning(f"Collection creation failed: {str(create_err)}")
+                        # Check if error is because collection already exists
+                        if "already exists" in str(create_err).lower():
+                            logger.info("Collection already exists, continuing")
+                            collection_exists = True
+                        else:
+                            # Something else went wrong
+                            raise
                 
-                # Now connect using LangChain integration
+                # Now connect using direct ChromaDB client for better persistence control
+                self._direct_client = client
+                
+                # Handle collection retrieval with robust retry logic
+                max_retries = 5  # Increased retries
+                retry_delay = 2.0  # Increased initial delay
+                
+                for retry in range(max_retries):
+                    try:
+                        logger.info(f"Attempting to get collection {self.collection_name} (attempt {retry+1}/{max_retries})")
+                        # If collection wasn't found to exist already, try creating it again on subsequent attempts
+                        if retry > 0 and not collection_exists:
+                            try:
+                                logger.info(f"Attempting to create collection again on retry {retry+1}")
+                                client.create_collection(name=self.collection_name)
+                                logger.info(f"Collection created on retry {retry+1}")
+                            except Exception as retry_create_err:
+                                logger.warning(f"Retry creation attempt failed: {str(retry_create_err)}")
+                        
+                        self._direct_collection = client.get_collection(name=self.collection_name)
+                        logger.info(f"Successfully connected to collection {self.collection_name}")
+                        break
+                    except Exception as e:
+                        logger.warning(f"Error getting collection (attempt {retry+1}/{max_retries}): {str(e)}")
+                        if retry < max_retries - 1:
+                            logger.info(f"Retrying in {retry_delay} seconds...")
+                            import time
+                            time.sleep(retry_delay)
+                            retry_delay *= 1.5  # More gradual backoff
+                        else:
+                            logger.error(f"Failed to get collection after {max_retries} attempts")
+                            raise
+                
+                # Still set up the LangChain wrapper for compatibility with other code
                 self.vectorstore = Chroma(
                     collection_name=self.collection_name,
                     embedding_function=self.embedding_function,
@@ -159,10 +203,16 @@ class VectorDatabase:
                     embedding_function=self.embedding_function,
                     persist_directory=self.db_path,
                 )
+                self._direct_client = None
+                self._direct_collection = None
             
             # Verify collection exists and count documents
             try:
-                count = self.vectorstore._collection.count()
+                # Use direct collection for count when available
+                if self._direct_collection:
+                    count = self._direct_collection.count()
+                else:
+                    count = self.vectorstore._collection.count()
                 logger.info(f"Vector database initialized with {count} documents")
             except Exception as count_err:
                 logger.error(f"Error counting documents: {str(count_err)}")
@@ -194,20 +244,96 @@ class VectorDatabase:
                     doc.metadata["id"] = str(uuid.uuid4())
                 ids.append(doc.metadata["id"])
             
-            # Add documents using custom add method
+            # Add documents using the most appropriate method
             texts = [doc.page_content for doc in documents]
             metadatas = [doc.metadata for doc in documents]
+            embeddings = self.embedding_function.embed_documents(texts, metadatas)
             
-            self.vectorstore._collection.add(
-                documents=texts,
-                embeddings=self.embedding_function.embed_documents(texts, metadatas),
-                metadatas=metadatas,
-                ids=ids
-            )
+            # Use direct ChromaDB client for server mode to ensure persistence
+            if self.use_server and self._direct_collection:
+                logger.info("Using direct ChromaDB client for adding documents")
+                self._direct_collection.add(
+                    documents=texts,
+                    embeddings=embeddings,
+                    metadatas=metadatas,
+                    ids=ids
+                )
+                # ChromaDB v0.6.0 removed the _api.flush() method
+                try:
+                    # Try to use flush method if available
+                    if hasattr(self._direct_client, '_api') and hasattr(self._direct_client._api, 'flush'):
+                        logger.info("Explicitly flushing changes with _api.flush()")
+                        self._direct_client._api.flush()
+                    else:
+                        logger.info("Flush method not available in this ChromaDB version - skipping")
+                except Exception as flush_err:
+                    logger.warning(f"Error flushing changes (non-critical): {str(flush_err)}")
+            else:
+                # Use LangChain's Chroma wrapper for local mode
+                self.vectorstore._collection.add(
+                    documents=texts,
+                    embeddings=embeddings,
+                    metadatas=metadatas,
+                    ids=ids
+                )
+                # Persist if using local mode
+                if not self.use_server:
+                    self.vectorstore.persist()
             
-            # Persist if using local mode
-            if not self.use_server:
-                self.vectorstore.persist()
+            # Force verification of document addition to ensure persistence
+            try:
+                # Verify at least one document was added by trying to retrieve it
+                verify_id = ids[0]
+                
+                # Use most direct method to verify
+                if self.use_server and self._direct_collection:
+                    verify_result = self._direct_collection.get(ids=[verify_id], include=["documents"])
+                else:
+                    verify_result = self.vectorstore._collection.get(ids=[verify_id], include=["documents"])
+                
+                if not verify_result["documents"]:
+                    # If empty, try with a completely fresh client connection
+                    logger.warning("Document not found on verification, attempting to reconnect...")
+
+                    # Create a new client to check persistence
+                    from chromadb import Client as ChromaClient
+                    from chromadb.config import Settings
+                    
+                    verify_client = ChromaClient(
+                        Settings(
+                            chroma_server_host=self.server_host,
+                            chroma_server_http_port=self.server_port
+                        )
+                    )
+                    verify_collection = verify_client.get_collection(name=self.collection_name)
+                    verify_result = verify_collection.get(ids=[verify_id], include=["documents"])
+                    
+                    if not verify_result["documents"]:
+                        logger.error("Document still not found after reconnection - persistence failure detected")
+                        
+                        # Last resort: try adding documents directly with the fresh client
+                        logger.warning("Attempting direct add via fresh client connection as last resort")
+                        verify_collection.add(
+                            documents=texts,
+                            embeddings=embeddings,
+                            metadatas=metadatas,
+                            ids=ids
+                        )
+                        logger.info("Direct add attempt completed")
+                    else:
+                        logger.info("Document verified after reconnection - persistence confirmed")
+                else:
+                    logger.info("Document addition verified successfully")
+                    
+                # Verify the total count in the collection
+                if self.use_server and self._direct_collection:
+                    count = self._direct_collection.count()
+                else:
+                    count = self.vectorstore._collection.count()
+                logger.info(f"Collection now contains {count} documents")
+                
+            except Exception as verify_err:
+                logger.warning(f"Error during verification: {str(verify_err)}")
                 
             logger.info(f"Added {len(ids)} documents to vector database")
             return ids
