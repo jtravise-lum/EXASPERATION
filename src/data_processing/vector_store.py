@@ -114,6 +114,39 @@ class VectorDatabase:
                         chroma_server_http_port=self.server_port
                     )
                 )
+                
+                # First check if collection exists, and create it if needed
+                collections = client.list_collections()
+                collection_exists = False
+                
+                for coll_info in collections:
+                    # Handle different versions of ChromaDB API
+                    if hasattr(coll_info, 'name'):
+                        coll_name = coll_info.name
+                    elif isinstance(coll_info, dict) and 'name' in coll_info:
+                        coll_name = coll_info['name']
+                    else:
+                        # If it's just a string or other object, convert to string
+                        coll_name = str(coll_info)
+                        
+                    if coll_name == self.collection_name:
+                        collection_exists = True
+                        logger.info(f"Found existing collection: {self.collection_name}")
+                        break
+                
+                if not collection_exists:
+                    logger.info(f"Creating new collection: {self.collection_name}")
+                    try:
+                        # Explicitly create the collection
+                        client.create_collection(
+                            name=self.collection_name,
+                            embedding_function=self.embedding_function
+                        )
+                        logger.info(f"Collection created successfully: {self.collection_name}")
+                    except Exception as create_err:
+                        logger.warning(f"Collection creation failed, may already exist: {str(create_err)}")
+                
+                # Now connect using LangChain integration
                 self.vectorstore = Chroma(
                     collection_name=self.collection_name,
                     embedding_function=self.embedding_function,
@@ -127,8 +160,13 @@ class VectorDatabase:
                     persist_directory=self.db_path,
                 )
             
-            count = self.vectorstore._collection.count()
-            logger.info(f"Vector database initialized with {count} documents")
+            # Verify collection exists and count documents
+            try:
+                count = self.vectorstore._collection.count()
+                logger.info(f"Vector database initialized with {count} documents")
+            except Exception as count_err:
+                logger.error(f"Error counting documents: {str(count_err)}")
+                
         except Exception as e:
             logger.error(f"Error initializing vector database: {str(e)}")
             raise
@@ -243,9 +281,46 @@ class VectorDatabase:
         """Delete the entire collection from the database."""
         logger.warning(f"Deleting collection {self.collection_name}")
         try:
-            self.vectorstore.delete_collection()
+            if self.use_server:
+                # Get the client directly to delete the collection
+                client = ChromaClient(
+                    Settings(
+                        chroma_server_host=self.server_host,
+                        chroma_server_http_port=self.server_port
+                    )
+                )
+                
+                # Check if collection exists before trying to delete
+                collections = client.list_collections()
+                collection_exists = False
+                for coll_info in collections:
+                    # Handle different versions of ChromaDB API
+                    if hasattr(coll_info, 'name'):
+                        coll_name = coll_info.name
+                    elif isinstance(coll_info, dict) and 'name' in coll_info:
+                        coll_name = coll_info['name']
+                    else:
+                        # If it's just a string or other object, convert to string
+                        coll_name = str(coll_info)
+                        
+                    if coll_name == self.collection_name:
+                        collection_exists = True
+                        break
+                
+                if collection_exists:
+                    # Delete collection directly with the client
+                    client.delete_collection(self.collection_name)
+                    logger.info(f"Collection {self.collection_name} deleted directly via client")
+                else:
+                    logger.warning(f"Collection {self.collection_name} not found, nothing to delete")
+            else:
+                # Use LangChain's delete_collection for local mode
+                self.vectorstore.delete_collection()
+                logger.info(f"Collection {self.collection_name} deleted via LangChain")
+            
+            # Reinitialize vectorstore
             self._init_vectorstore()
-            logger.info("Collection deleted and reinitialized")
+            logger.info("Vector store reinitialized")
         except Exception as e:
             logger.error(f"Error deleting collection: {str(e)}")
             raise
