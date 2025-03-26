@@ -1,6 +1,6 @@
 # EXASPERATION Next Steps
 
-## Immediate Priorities (Next 2 Weeks)
+## Phase 1: Core Functionality
 
 ### 1. Complete Vector Database Integration
 - **Setup ChromaDB environment**
@@ -53,7 +53,7 @@
   - Implement context injection mechanisms
   - Add citation and attribution handling
 
-## Medium-Term Priorities (1-2 Months)
+## Phase 2: User Interface and Enhancements
 
 ### 1. Build User Interface
 
@@ -96,7 +96,7 @@
   - Set up cost allocation reporting
   - Optimize embedding and LLM usage
 
-## Long-Term Goals (3+ Months)
+## Phase 3: Advanced Features and Scaling
 
 ### 1. Advanced Features
 
