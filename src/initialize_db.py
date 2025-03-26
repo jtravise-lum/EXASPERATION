@@ -92,6 +92,11 @@ def parse_args():
         default=4,
         help="Number of parallel workers for embedding process",
     )
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable progress bar display",
+    )
     return parser.parse_args()
 
 
@@ -120,6 +125,7 @@ def main():
             server_port=args.server_port,
             batch_size=args.batch_size,
             max_threads=args.workers,
+            disable_progress_bar=args.no_progress,
         )
         
         # Run the ingestion pipeline

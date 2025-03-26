@@ -33,6 +33,7 @@ class ExabeamIngestionPipeline:
         server_port: int = CHROMA_SERVER_PORT,
         batch_size: int = 50,
         max_threads: int = 4,
+        disable_progress_bar: bool = False,
     ):
         """Initialize the ingestion pipeline.
 
@@ -45,6 +46,7 @@ class ExabeamIngestionPipeline:
             server_port: ChromaDB server port
             batch_size: Number of documents to process in each batch
             max_threads: Maximum number of threads for concurrent processing
+            disable_progress_bar: Whether to disable the progress bar display
         """
         self.content_dir = Path(content_dir)
         if not self.content_dir.exists() or not self.content_dir.is_dir():
@@ -57,6 +59,7 @@ class ExabeamIngestionPipeline:
         self.server_port = server_port
         self.batch_size = batch_size
         self.max_threads = max_threads
+        self.disable_progress_bar = disable_progress_bar
 
         # Initialize components
         self.document_loader = ExabeamDocumentLoader(content_dir=content_dir)
@@ -201,38 +204,69 @@ class ExabeamIngestionPipeline:
         """
         total_batches = (len(documents) + self.batch_size - 1) // self.batch_size
         
-        with tqdm(total=len(documents), desc="Ingesting documents") as pbar:
-            for i in range(0, len(documents), self.batch_size):
-                batch = documents[i:i+self.batch_size]
-                batch_num = (i // self.batch_size) + 1
+        # Use tqdm with different parameters to avoid mangling log output
+        if self.disable_progress_bar:
+            logger.info(f"Progress bar disabled. Processing {total_batches} batches...")
+            self._process_document_batches(documents, total_batches)
+        else:
+            try:
+                # Create a progress bar that plays nicely with logging
+                with tqdm(
+                    total=len(documents), 
+                    desc="Ingesting documents",
+                    position=0,
+                    leave=True,
+                    ncols=100,
+                    mininterval=1.0,  # Update less frequently
+                    bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]'
+                ) as pbar:
+                    self._process_document_batches(documents, total_batches, pbar)
+            except Exception as e:
+                # If progress bar fails, continue without it
+                logger.warning(f"Progress bar error: {str(e)}. Continuing without progress display.")
+                self._process_document_batches(documents, total_batches)
+
+    def _process_document_batches(self, documents: List[Document], total_batches: int, pbar=None) -> None:
+        """Process document batches with or without progress bar.
+        
+        Args:
+            documents: List of documents to process
+            total_batches: Total number of batches
+            pbar: Optional progress bar
+        """
+        for i in range(0, len(documents), self.batch_size):
+            batch = documents[i:i+self.batch_size]
+            batch_num = (i // self.batch_size) + 1
+            
+            logger.info(f"Processing batch {batch_num}/{total_batches} with {len(batch)} documents")
+            
+            try:
+                # Add batch to vector database
+                self.vector_db.add_documents(batch)
+                self.stats["successful_chunks"] += len(batch)
+                logger.info(f"Successfully added batch {batch_num}/{total_batches}")
+            except Exception as e:
+                self.stats["failed_chunks"] += len(batch)
+                self.stats["embedding_errors"] += 1
+                logger.error(f"Error processing batch {batch_num}/{total_batches}: {str(e)}", exc_info=True)
                 
-                logger.info(f"Processing batch {batch_num}/{total_batches} with {len(batch)} documents")
-                
-                try:
-                    # Add batch to vector database
-                    self.vector_db.add_documents(batch)
-                    self.stats["successful_chunks"] += len(batch)
-                    logger.info(f"Successfully added batch {batch_num}/{total_batches}")
-                except Exception as e:
-                    self.stats["failed_chunks"] += len(batch)
-                    self.stats["embedding_errors"] += 1
-                    logger.error(f"Error processing batch {batch_num}/{total_batches}: {str(e)}", exc_info=True)
-                    
-                    # If a batch fails, try processing documents individually
-                    logger.info("Attempting to process failed batch documents individually")
-                    for doc in batch:
-                        try:
-                            # Sanitize individual document metadata to ensure compatibility
-                            sanitized_doc = doc.copy()
-                            sanitized_doc.metadata = self._sanitize_metadata_for_chroma(doc.metadata)
-                            
-                            self.vector_db.add_documents([sanitized_doc])
-                            self.stats["successful_chunks"] += 1
-                            self.stats["failed_chunks"] -= 1  # Correct the count
-                            logger.info(f"Successfully added individual document")
-                        except Exception as e2:
-                            logger.error(f"Error processing individual document: {str(e2)}")
-                
+                # If a batch fails, try processing documents individually
+                logger.info("Attempting to process failed batch documents individually")
+                for doc in batch:
+                    try:
+                        # Sanitize individual document metadata to ensure compatibility
+                        sanitized_doc = doc.copy()
+                        sanitized_doc.metadata = self._sanitize_metadata_for_chroma(doc.metadata)
+                        
+                        self.vector_db.add_documents([sanitized_doc])
+                        self.stats["successful_chunks"] += 1
+                        self.stats["failed_chunks"] -= 1  # Correct the count
+                        logger.info(f"Successfully added individual document")
+                    except Exception as e2:
+                        logger.error(f"Error processing individual document: {str(e2)}")
+            
+            # Update progress bar if available
+            if pbar is not None:
                 pbar.update(len(batch))
 
     def verify_ingestion(self, query: str = "Exabeam") -> List[Document]:
