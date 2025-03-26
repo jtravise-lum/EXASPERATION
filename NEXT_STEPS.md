@@ -18,10 +18,10 @@
 - **Testing and validation**
   - ✅ Implement database verification utility with test queries
   - ✅ Add ingestion statistics and reporting 
-  - Create test suite for vector database operations
+  - ✅ Test ChromaDB Docker integration
   - Verify embedding-to-document mapping accuracy
-  - Benchmark ingestion performance
-  - Test query performance with different filter combinations
+  - Benchmark ingestion performance with parallel processing
+  - Verify multi-worker embedding functionality
 
 ### 2. Implement Query Processing
 
