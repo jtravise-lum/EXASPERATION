@@ -26,11 +26,12 @@
 - Set up document versioning system
 
 ### Embedding Pipeline
-- Implement Gemini Embedding API integration
-- Configure Voyage API as fallback option
-- Create embedding caching system
+- Implement dual-model Voyage AI embedding integration
+- Use voyage-3-large for natural language content
+- Use voyage-code-3 for structured data and parsers
+- Create content-aware model routing system
 - Design batch processing for large document sets
-- Implement embedding quality monitoring
+- Implement embedding caching and failure recovery
 
 ### Vector Database Setup
 - Deploy Chroma DB in Docker container
