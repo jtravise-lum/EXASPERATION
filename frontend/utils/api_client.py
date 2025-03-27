@@ -332,15 +332,33 @@ class APIClient:
             True if the API is available, False otherwise
         """
         try:
-            # Using the health endpoint which should be available without authentication
+            # Use the correct health endpoint at /v1/health
             response = self.client.get(
-                f"{self.base_url.split('/v1')[0]}/health", 
+                f"{self.base_url}/health", 
                 timeout=5  # Short timeout for health check
             )
             return response.status_code == 200
-        except:
-            # API is running, assume it's available
-            return True
+        except Exception as e:
+            # Try the explicit v1/health path
+            try:
+                response = self.client.get(
+                    f"{self.base_url.split('/v1')[0]}/v1/health",
+                    timeout=5
+                )
+                return response.status_code == 200
+            except:
+                # All attempts failed, but API could still be working (other endpoints)
+                # Let's check a known working endpoint
+                try:
+                    response = self.client.get(
+                        f"{self.base_url}/metadata/options",
+                        headers=self.headers,
+                        timeout=5
+                    )
+                    return response.status_code == 200
+                except:
+                    # All attempts failed
+                    return False
 
 
 # Create a singleton instance
