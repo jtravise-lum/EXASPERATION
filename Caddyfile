@@ -1,0 +1,35 @@
+exp.travise.net {
+    # Reverse proxy for the frontend (Streamlit)
+    handle / {
+        reverse_proxy localhost:8501
+    }
+
+    # Reverse proxy for the API
+    handle /v1/* {
+        reverse_proxy localhost:8888
+    }
+    
+    # Use existing certificates
+    tls /home/johnt/caddy-docker/caddy/certs/exp.fullchain.pem /home/johnt/caddy-docker/caddy/certs/exp.privkey.pem
+
+    # Enable compression
+    encode gzip zstd
+
+    # Add security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        X-XSS-Protection "1; mode=block"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; media-src 'self'; frame-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self';"
+    }
+
+    # Configure logging
+    log {
+        output file ./logs/caddy/access.log {
+            roll_size 10MB
+            roll_keep 10
+        }
+    }
+}

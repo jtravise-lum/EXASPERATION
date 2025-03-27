@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv(".env.frontend")
 
 # API Configuration
-API_URL = os.getenv("EXASPERATION_API_URL", "http://localhost:8000")
+API_URL = os.getenv("EXASPERATION_API_URL", "http://localhost:8888/v1")
 API_KEY = os.getenv("EXASPERATION_API_KEY", "")
 API_TIMEOUT = int(os.getenv("EXASPERATION_API_TIMEOUT", "30"))
 
@@ -16,6 +16,10 @@ ENABLE_ANALYTICS = os.getenv("ENABLE_ANALYTICS", "false").lower() == "true"
 ENABLE_AUTHENTICATION = os.getenv("ENABLE_AUTHENTICATION", "false").lower() == "true"
 ENABLE_ADVANCED_FILTERS = os.getenv("ENABLE_ADVANCED_FILTERS", "true").lower() == "true"
 ENABLE_SUGGESTIONS = os.getenv("ENABLE_SUGGESTIONS", "true").lower() == "true"
+
+# Error Handling
+ENABLE_MOCK_FALLBACKS = os.getenv("ENABLE_MOCK_FALLBACKS", "false").lower() == "true"
+SHOW_API_ERRORS = os.getenv("SHOW_API_ERRORS", "true").lower() == "true"
 
 # Styling
 THEME_PRIMARY_COLOR = os.getenv("STREAMLIT_THEME_PRIMARY_COLOR", "#0066CC")
