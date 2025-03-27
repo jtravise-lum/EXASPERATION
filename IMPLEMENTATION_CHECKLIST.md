@@ -10,8 +10,8 @@
 
 ## Embedding Pipeline
 - [x] Implement dual-model Voyage AI embedding integration
-- [x] Configure voyage-3-large for natural language content
-- [x] Configure voyage-code-3 for structured data and parsers
+- [x] Configure voyage-3-large (1024 dimensions) for natural language content
+- [x] Configure voyage-code-3 (1024 dimensions) for structured data and parsers
 - [x] Create content-aware model routing system
 - [x] Design batch processing for large document sets
 - [x] Implement embedding error handling and fallback
@@ -19,6 +19,7 @@
 - [x] Add configurable parallel processing with thread pools
 - [ ] Add embedding caching system
 - [ ] Set up embedding quality monitoring
+- [ ] Ensure query embedding uses same dimension models as ingestion (1024d)
 
 ## Vector Database
 - [x] Configure Chroma DB integration with Docker Compose
@@ -32,31 +33,38 @@
 - [ ] Implement version control for vector database
 
 ## Query Processing
-- [ ] Build query preprocessing module
-- [ ] Implement query expansion techniques
-- [ ] Create query embedding with appropriate model selection
-- [ ] Set up hybrid search (semantic + keyword)
-- [ ] Develop context assembly system
+- [x] Build query preprocessing module
+- [x] Implement query expansion techniques
+- [x] Create query embedding with appropriate model selection
+- [x] Set up hybrid search (semantic + keyword)
+- [x] Develop context assembly system
+- [x] Implement security domain knowledge (MITRE ATT&CK, Exabeam products)
+- [x] Add metadata extraction for filtering
 
 ## Re-Ranking System
-- [ ] Integrate reranking functionality
-- [ ] Implement result filtering based on relevance scores
-- [ ] Create reranking threshold configurations
-- [ ] Set up caching for frequent queries
-- [ ] Develop context relevance verification
+- [x] Integrate reranking functionality
+- [x] Implement result filtering based on relevance scores
+- [x] Create reranking threshold configurations
+- [x] Set up caching for frequent queries
+- [x] Develop context relevance verification
+- [x] Implement result diversification
+- [x] Add fallback scoring for when model is unavailable
 
 ## LLM Integration
-- [ ] Set up Claude 3.5 Sonnet API integration
-- [ ] Configure API key management (secure storage)
-- [ ] Implement request rate limiting
-- [ ] Create request/response logging system
-- [ ] Design fallback mechanisms for API failures
+- [x] Set up Claude 3.5 Sonnet API integration
+- [x] Configure API key management (secure storage)
+- [x] Implement request rate limiting
+- [x] Create request/response logging system
+- [x] Design fallback mechanisms for API failures
+- [x] Implement model-agnostic LLM architecture
+- [x] Add support for multiple LLM providers
+- [x] Create token usage tracking
 
 ## Prompt Engineering
-- [ ] Develop base prompt templates
-- [ ] Create dynamic prompt assembly based on query type
-- [ ] Implement prompt optimization techniques
-- [ ] Design specialized prompts for different content types
+- [x] Develop base prompt templates
+- [x] Create dynamic prompt assembly based on query type
+- [x] Implement specialized prompts for different content types
+- [x] Design system prompt for consistent assistant behavior
 
 ## API and Interface
 - [ ] Develop RESTful API with FastAPI

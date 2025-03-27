@@ -1,5 +1,35 @@
 # EXASPERATION Changes Log
 
+## 2025-03-27 16:45 - Dependency and Compatibility Improvements
+- Added graceful dependency handling for optional packages
+- Modified retriever to work with any VectorDatabase implementation
+- Added fallback mechanisms when libraries are missing
+- Updated dependency documentation and requirements
+- Fixed test script for demonstration with mock LLM
+
+## 2025-03-27 16:30 - LLM Integration Implementation
+- Created modular, provider-agnostic LLM integration architecture
+- Implemented support for Anthropic Claude, OpenAI GPT, and Mock LLM
+- Added specialized prompt templates for different query types
+- Created query engine combining retrieval and LLM components
+- Implemented token usage tracking and caching
+- Added provider switching capability for testing different models
+- Created test_query.py script to demonstrate the complete RAG pipeline
+
+## 2025-03-27 15:30 - Retrieval System Implementation
+- Implemented comprehensive query processing with security domain knowledge
+- Added query type detection and embedding model selection
+- Implemented hybrid search with vector and keyword components
+- Created result diversification for balanced retrieval
+- Added fallback strategies for failed searches
+- Enhanced context assembly with rich citations
+- Implemented reranking with cross-encoder support and heuristic fallback
+
+## 2025-03-27 14:30 - Documentation Update
+- Clarified embedding dimensions in documentation (1024d for both models)
+- Identified query embedding dimension mismatch issue (384d vs 1024d)
+- Added checklist item to ensure retrieval system uses correct dimensions
+
 ## 2025-03-26 22:55 - ChromaDB Version Compatibility Fix
 - Fixed compatibility issues with ChromaDB 0.6.0 API changes
 - Updated collection handling for the new list_collections API format

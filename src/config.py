@@ -24,6 +24,11 @@ CHROMA_SERVER_PORT = int(os.getenv("CHROMA_SERVER_PORT", "8000"))
 # API settings
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY")  # Must be set in .env file
+
+# Rate limiting settings
+API_RATE_LIMIT = int(os.getenv("API_RATE_LIMIT", "60"))  # Max requests per minute
+API_CONCURRENT_LIMIT = int(os.getenv("API_CONCURRENT_LIMIT", "5"))  # Max concurrent requests
 
 # Application settings
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() in ("true", "t", "1")

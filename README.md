@@ -32,9 +32,12 @@ EXASPERATION uses a modular architecture consisting of:
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.8+ (Python 3.10 or 3.11 recommended)
 - 8GB+ RAM recommended
 - 2GB disk space for vector database
+- API keys for Voyage AI (embedding), and optionally:
+  - Anthropic API key for Claude
+  - OpenAI API key for GPT models
 
 ### Installation
 
@@ -87,8 +90,44 @@ For local ChromaDB installation (not recommended), set `use_server=False` when i
 
 ### Usage
 
+#### Testing the Query Engine
+
 ```bash
-# Start the web interface
+# Test with default (mock) LLM
+./test_query.py "What parsers are available for Windows Security events?"
+
+# Test with Anthropic Claude
+./test_query.py --provider anthropic --model claude-3-5-sonnet-20240620 "Explain the Audit Tampering use case"
+
+# Test with OpenAI GPT
+./test_query.py --provider openai --model gpt-4o "How does Exabeam detect lateral movement?"
+
+# Using filters and adjusting parameters
+./test_query.py --top-k 10 --temperature 0.3 "What MITRE ATT&CK techniques are covered by Exabeam?"
+```
+
+#### Running the Query Engine
+
+After setting up the environment and initializing the database, you can use the query engine to test the system:
+
+```bash
+# Test with the mock LLM (no API key required)
+./test_query.py --provider mock "What parsers are available for Windows Security events?"
+
+# Test with Anthropic Claude (requires API key)
+./test_query.py --provider anthropic "Explain the Audit Tampering use case"
+
+# Test with OpenAI GPT (requires API key)
+./test_query.py --provider openai "How does Exabeam detect lateral movement?"
+
+# Adjust parameters
+./test_query.py --top-k 10 --temperature 0.3 "What MITRE ATT&CK techniques are covered by Exabeam?"
+```
+
+#### Using the Web Interface (Coming Soon)
+
+```bash
+# Coming in a future update
 python app.py
 ```
 

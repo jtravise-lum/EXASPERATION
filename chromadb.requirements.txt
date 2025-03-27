@@ -14,6 +14,9 @@ pandas
 # Embeddings and LLM integration
 anthropic
 openai
+tiktoken  # Token counting for OpenAI models
+requests  # HTTP requests for APIs
+sentence-transformers  # For reranking (optional)
 
 # Testing and development
 pytest
