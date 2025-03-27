@@ -1,5 +1,17 @@
 # EXASPERATION Changes Log
 
+## 2025-03-27 21:15 - Frontend Interface Enhancements
+- Fixed display issues with source documents
+- Added fallback title handling for untitled documents
+- Improved content display formatting
+- Fixed nested expander issue in results display
+- Added development mode for testing without API
+- Enhanced connection diagnostics for API troubleshooting
+- Added port scanning and service detection for API discovery
+- Updated README with frontend documentation
+- Added comprehensive connection error handling
+- Created mock data fallbacks for development
+
 ## 2025-03-27 20:15 - Frontend Implementation
 - Implemented Streamlit frontend based on the component design document
 - Created core components:

@@ -1,8 +1,8 @@
 """Pydantic models for API requests and responses."""
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class SearchFilters(BaseModel):
@@ -48,10 +48,18 @@ class SourceDocument(BaseModel):
     id: str = Field(..., description="Document ID")
     title: str = Field(..., description="Document title")
     url: str = Field(..., description="Document URL")
-    chunk_id: str = Field(..., description="Chunk ID")
+    # Allow chunk_id to be either string or int since the API is returning integers
+    chunk_id: Union[str, int] = Field(..., description="Chunk ID")
     content: str = Field(..., description="Document content")
     relevance_score: float = Field(..., description="Relevance score")
     metadata: DocumentMetadata = Field(..., description="Document metadata")
+    
+    # Model validators to ensure type consistency
+    @field_validator('chunk_id')
+    @classmethod
+    def convert_chunk_id_to_str(cls, v):
+        # Ensure chunk_id is always a string
+        return str(v)
 
 
 class SearchMetadata(BaseModel):

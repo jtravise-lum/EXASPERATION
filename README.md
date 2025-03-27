@@ -26,7 +26,8 @@ EXASPERATION uses a modular architecture consisting of:
 2. **Vector Database**: Stores embeddings of document chunks for semantic search
 3. **Retrieval Engine**: Finds the most relevant documentation segments for a given query
 4. **LLM Integration**: Generates human-readable responses based on retrieved context
-5. **Simple Web Interface**: Allows for easy interaction with the system
+5. **API Layer**: FastAPI-based API for frontend communication
+6. **Web Interface**: Streamlit-based user interface with search, filter, and feedback capabilities
 
 ## Getting Started
 
@@ -124,14 +125,26 @@ After setting up the environment and initializing the database, you can use the 
 ./test_query.py --top-k 10 --temperature 0.3 "What MITRE ATT&CK techniques are covered by Exabeam?"
 ```
 
-#### Using the Web Interface (Coming Soon)
+#### Using the Web Interface
 
 ```bash
-# Coming in a future update
-python app.py
+# Set up the frontend environment
+./setup_frontend.sh
+
+# Run the frontend application
+./run_frontend.sh
 ```
 
-Then open your browser to http://localhost:8000 to begin asking questions.
+Then open your browser to http://localhost:8501 to begin asking questions.
+
+Make sure the API is running before starting the frontend:
+
+```bash
+# Run the API server
+python -m frontend.api.main
+```
+
+The API runs on port 8888 by default.
 
 ## Example Queries
 
@@ -143,8 +156,11 @@ Then open your browser to http://localhost:8000 to begin asking questions.
 
 ## Roadmap
 
+- [x] Web interface for searching and viewing results
+- [x] API layer for frontend-backend communication
+- [x] User feedback mechanism for rating responses
 - [ ] Add support for PDF documentation
-- [ ] Implement user feedback mechanism to improve retrieval quality
+- [ ] Enhanced analytics and usage tracking
 - [ ] Create CLI interface for integration with scripts
 - [ ] Add visualization for relationships between components
 - [ ] Support for real-time documentation updates
