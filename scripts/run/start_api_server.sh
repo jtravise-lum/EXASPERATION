@@ -3,7 +3,7 @@
 
 # Configuration
 API_HOST="0.0.0.0"  # Listen on all interfaces
-API_PORT=8080       # Default port from config
+API_PORT=8888       # Default port from config
 API_LOG_DIR="logs"  # Directory for logs
 API_LOG_FILE="api_server.log"
 PID_FILE="api_server.pid"
