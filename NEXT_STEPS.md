@@ -79,21 +79,24 @@
 
 - **Frontend deployment**
   - ✅ Create dedicated frontend virtual environment
-  - Set up Docker configuration for frontend
+  - ✅ Set up Docker configuration for frontend
   - ✅ Implement production-ready configuration
   - Integrate with Caddy for HTTPS support
 
 ### 2. Enhance Retrieval Quality ✅
 
 - **Implement reranking system** ✅
-  - ✅ Integrate cross-encoder based reranking
+  - ✅ Integrate API-based reranking services
+  - ✅ Remove GPU dependencies for server compatibility
   - ✅ Develop relevance thresholding
   - ✅ Create context relevance verification
   - ✅ Implement result diversification
+  - ✅ Add fallback to heuristic scoring
 
 - **Add caching system** ✅
   - ✅ Create embedding cache for frequent queries
   - ✅ Implement result caching with appropriate TTL
+  - ✅ Add reranking score caching to reduce API calls
   - Set up cache invalidation for content updates
 
 ### 3. Scale and Optimize
@@ -102,6 +105,8 @@
   - ✅ Implement multi-worker parallel processing
   - ✅ Optimize batch sizes for different operations
   - ✅ Add configurable parallelism options
+  - ✅ Remove heavyweight ML dependencies
+  - ✅ Offload ML tasks to external API services
   - Implement asynchronous processing
   - Create prefetching for common queries
   - Set up performance monitoring
@@ -109,9 +114,10 @@
 
 - **Cost management**
   - ✅ Implement token usage tracking
+  - ✅ Implement selective API service usage based on document count
   - Create usage quotas and limits
   - Set up cost allocation reporting
-  - Optimize embedding and LLM usage
+  - ✅ Optimize embedding and LLM usage
   - Implement usage analytics dashboard
 
 ## Phase 3: Advanced Features and Scaling
