@@ -19,44 +19,22 @@ fi
 mkdir -p logs/caddy
 
 # Start the Docker services
-echo -e "${YELLOW}Starting Docker services...${NC}"
-docker-compose up -d
+echo -e "${YELLOW}Stopping any running containers...${NC}"
+docker-compose down
+
+# Remove existing images to force rebuild
+echo -e "${YELLOW}Removing frontend and API images...${NC}"
+docker rmi exasperation-frontend:latest exasperation-api:latest 2>/dev/null || true
+
+echo -e "${YELLOW}Starting Docker services with rebuild...${NC}"
+docker-compose up -d --build
 if [ $? -ne 0 ]; then
     echo -e "${RED}Failed to start Docker services. See error above.${NC}"
     exit 1
 fi
 
-# Check if Caddy is installed
-if ! command -v caddy &> /dev/null; then
-    echo -e "${RED}Caddy is not installed. Please install Caddy first.${NC}"
-    echo -e "${YELLOW}You can install Caddy with:${NC}"
-    echo -e "sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https"
-    echo -e "curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg"
-    echo -e "curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list"
-    echo -e "sudo apt update && sudo apt install caddy"
-    exit 1
-fi
-
-# Check if Caddy service is running systemd
-if systemctl is-active caddy >/dev/null 2>&1; then
-    echo -e "${YELLOW}Caddy is running as a system service. Reloading configuration...${NC}"
-    # Copy the Caddyfile to the system location
-    sudo cp Caddyfile /etc/caddy/Caddyfile
-    # Reload Caddy
-    sudo systemctl reload caddy
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Failed to reload Caddy. See error above.${NC}"
-        echo -e "${YELLOW}You can check the Caddy error logs with: sudo journalctl -u caddy -e${NC}"
-        exit 1
-    fi
-else
-    echo -e "${YELLOW}Caddy is not running as a system service. Starting Caddy manually...${NC}"
-    caddy stop
-    caddy run --config Caddyfile &
-    CADDY_PID=$!
-    echo $CADDY_PID > caddy.pid
-    echo -e "${GREEN}Caddy started with PID $CADDY_PID${NC}"
-fi
+# Caddy is now running as a Docker container, no need to run it separately
+echo -e "${YELLOW}Caddy is running in Docker. No need to start it separately.${NC}"
 
 # Wait for services to be ready
 echo -e "${YELLOW}Waiting for services to be ready...${NC}"
