@@ -19,26 +19,38 @@ services:
       retries: 3
       
   api:
-    image: python:3.10-slim
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    image: exasperation-api:latest
     network_mode: "host"  # Use host network mode to allow direct access from local Caddy
-    working_dir: /app
     volumes:
-      - .:/app
+      - ./data:/app/data
     depends_on:
       - chromadb
     restart: unless-stopped
-    command: >
-      bash -c "
-        pip install -r frontend.requirements.txt &&
-        python -m frontend.api.main --host 0.0.0.0 --port 8888
-      "
+    environment:
+      - DEBUG_MODE=True
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - VOYAGE_API_KEY=${VOYAGE_API_KEY}
+      - CHROMA_SERVER_HOST=localhost
+      - CHROMA_SERVER_PORT=8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
       
   frontend:
-    image: python:3.10-slim
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: exasperation-frontend:latest
     network_mode: "host"  # Use host network mode to allow direct access from local Caddy
-    working_dir: /app
     volumes:
-      - .:/app
+      - ./data:/app/data
     environment:
       - STREAMLIT_SERVER_PORT=8501
       - STREAMLIT_SERVER_HEADLESS=true
@@ -52,14 +64,33 @@ services:
     depends_on:
       - api
     restart: unless-stopped
-    command: >
-      bash -c "
-        pip install -r frontend.requirements.txt &&
-        python -m streamlit run frontend/app.py
-      "
     healthcheck:
       test: ["CMD", "python", "/app/frontend/healthcheck.py"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
+      
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "2222:2222"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy-docker/caddy/config/Caddyfile:/etc/caddy/Caddyfile
+      - ./caddy-docker/caddy/certs:/certs:ro
+      - ./caddy-docker/caddy/data:/data
+      - ./logs/caddy:/logs/caddy
+    depends_on:
+      - api
+      - frontend
+    healthcheck:
+      test: ["CMD", "caddy", "version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

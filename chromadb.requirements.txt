@@ -16,7 +16,7 @@ anthropic
 openai
 tiktoken  # Token counting for OpenAI models
 requests  # HTTP requests for APIs
-sentence-transformers  # For reranking (optional)
+numpy     # For vector operations
 
 # Testing and development
 pytest

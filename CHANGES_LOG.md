@@ -1,5 +1,15 @@
 # EXASPERATION Changes Log
 
+## 2025-03-27 22:30 - Reranker Service Optimization
+- Refactored reranker to use API-based services instead of local models
+- Removed GPU dependencies for better server compatibility
+- Added support for multiple reranking service providers
+- Implemented service provider fallback mechanism
+- Added environment variables for service configuration
+- Created caching system to reduce API calls
+- Improved efficiency with heuristic-based scoring for large document sets
+- Added Docker environment configuration for API keys
+
 ## 2025-03-27 21:15 - Frontend Interface Enhancements
 - Fixed display issues with source documents
 - Added fallback title handling for untitled documents

@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import time
+import json
 from typing import List, Dict, Any, Optional, Tuple, Union, Set
 from collections import defaultdict
 
@@ -17,7 +18,7 @@ class Reranker:
     """Reranks and filters retrieved documents by relevance.
     
     This class implements:
-    1. Integration with cross-encoder reranking models
+    1. Integration with external reranking APIs
     2. Relevance threshold filtering
     3. Query-document relevance scoring
     4. Result diversification strategies
@@ -26,7 +27,7 @@ class Reranker:
 
     def __init__(
         self, 
-        model_name: str = "BAAI/bge-reranker-large",
+        provider: str = "anthropic",  # Options: "anthropic", "openai", "voyage", "heuristic"
         api_base_url: Optional[str] = None,
         api_key: Optional[str] = None,
         cache_size: int = 100
@@ -34,30 +35,34 @@ class Reranker:
         """Initialize the reranker.
 
         Args:
-            model_name: Name of the reranker model to use
+            provider: The API provider to use for reranking ("anthropic", "openai", "voyage", "heuristic")
             api_base_url: Optional API endpoint for hosted reranker
-            api_key: Optional API key for hosted reranker
+            api_key: Optional API key for the reranking service
             cache_size: Maximum number of query-document pairs to cache
         """
-        self.model_name = model_name
+        self.provider = provider.lower()
         self.api_base_url = api_base_url
-        self.api_key = api_key or os.environ.get("RERANKER_API_KEY")
+        
+        # Initialize API keys from environment if not provided
+        if api_key:
+            self.api_key = api_key
+        else:
+            if self.provider == "anthropic":
+                self.api_key = os.environ.get("ANTHROPIC_API_KEY")
+            elif self.provider == "openai":
+                self.api_key = os.environ.get("OPENAI_API_KEY")
+            elif self.provider == "voyage":
+                self.api_key = os.environ.get("VOYAGE_API_KEY")
+            else:
+                self.api_key = None
         
         # Initialize cache for repeated query-document pairs
         self._scores_cache = {}
         self._cache_size = cache_size
         
-        # Try to load SentenceTransformers if available
-        self.model = None
-        try:
-            from sentence_transformers import CrossEncoder
-            self.model = CrossEncoder(model_name)
-            logger.info(f"Initialized cross-encoder reranker model: {model_name}")
-        except (ImportError, Exception) as e:
-            logger.warning(f"Could not initialize SentenceTransformers: {str(e)}")
-            logger.info("Falling back to simulated reranking with heuristic scoring")
+        logger.info(f"Initialized reranker with provider: {self.provider}")
         
-        # Heuristic scoring patterns
+        # Heuristic scoring patterns (used as fallback or if provider is "heuristic")
         self._init_scoring_patterns()
         
     def _init_scoring_patterns(self):
@@ -90,10 +95,10 @@ class Reranker:
             "reference": 0.9
         }
 
-    def compute_cross_encoder_scores(
+    def compute_api_scores(
         self, query: str, documents: List[Document]
     ) -> List[Tuple[Document, float]]:
-        """Compute relevance scores using cross-encoder model.
+        """Compute relevance scores using the configured API provider.
         
         Args:
             query: The search query
@@ -104,21 +109,255 @@ class Reranker:
         """
         if not documents:
             return []
-        
+            
+        # Check if we have a valid provider and API key
+        if self.provider not in ["anthropic", "openai", "voyage"] or not self.api_key:
+            logger.warning(f"Invalid provider '{self.provider}' or missing API key, falling back to heuristic scoring")
+            return self.compute_heuristic_scores(query, documents)
+            
+        # For large document sets, batching is more efficient
+        if len(documents) > 10:
+            return self._batch_score_documents(query, documents)
+            
         # Create query-document pairs
         pairs = [(query, doc.page_content) for doc in documents]
         
-        # Use CrossEncoder model for scoring
-        if self.model:
-            try:
-                scores = self.model.predict(pairs)
-                scored_docs = [(doc, float(score)) for doc, score in zip(documents, scores)]
-                return scored_docs
-            except Exception as e:
-                logger.error(f"Error computing cross-encoder scores: {str(e)}")
-                logger.info("Falling back to heuristic scoring")
+        try:
+            if self.provider == "anthropic":
+                return self._score_with_anthropic(query, documents)
+            elif self.provider == "openai":
+                return self._score_with_openai(query, documents)
+            elif self.provider == "voyage":
+                return self._score_with_voyage(query, documents)
+        except Exception as e:
+            logger.error(f"Error computing API scores with {self.provider}: {str(e)}")
+            logger.info("Falling back to heuristic scoring")
                 
-        # If model isn't available, fall back to heuristic scoring
+        # If API scoring fails, fall back to heuristic scoring
+        return self.compute_heuristic_scores(query, documents)
+        
+    def _score_with_anthropic(self, query: str, documents: List[Document]) -> List[Tuple[Document, float]]:
+        """Use Anthropic Claude to score documents.
+        
+        Args:
+            query: The search query
+            documents: List of documents to score
+            
+        Returns:
+            List of (document, score) tuples
+        """
+        try:
+            import anthropic
+            
+            client = anthropic.Anthropic(api_key=self.api_key)
+            
+            # For each document, ask Claude to rate relevance from 0-100
+            scored_docs = []
+            
+            for i, doc in enumerate(documents):
+                cache_key = f"{query}_{hash(doc.page_content)}"
+                if cache_key in self._scores_cache:
+                    scored_docs.append((doc, self._scores_cache[cache_key]))
+                    continue
+                    
+                prompt = f"""
+                <instruction>
+                Rate how relevant the document is to the query. Return ONLY a number between 0 and 100, where:
+                - 0 means completely irrelevant
+                - 100 means perfect match answering the query completely
+                
+                Query: "{query}"
+                
+                Document:
+                {doc.page_content}
+                </instruction>
+                """
+                
+                response = client.messages.create(
+                    model="claude-3-haiku-20240307",  # Use smallest, fastest model for efficiency
+                    max_tokens=5,
+                    temperature=0,
+                    messages=[
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                
+                try:
+                    # Extract score from response
+                    score_text = response.content[0].text.strip()
+                    score = float(score_text) / 100.0  # Normalize to 0-1
+                    
+                    # Cap score at 1.0
+                    score = min(score, 1.0)
+                    
+                    # Cache the score
+                    self._scores_cache[cache_key] = score
+                    
+                    scored_docs.append((doc, score))
+                except (ValueError, IndexError) as e:
+                    logger.error(f"Error parsing score from Claude response: {e}")
+                    scored_docs.append((doc, 0.5))  # Default to middle score on error
+            
+            return scored_docs
+            
+        except ImportError:
+            logger.error("Anthropic package not installed. Install with 'pip install anthropic'")
+            return self.compute_heuristic_scores(query, documents)
+            
+    def _score_with_openai(self, query: str, documents: List[Document]) -> List[Tuple[Document, float]]:
+        """Use OpenAI to score documents.
+        
+        Args:
+            query: The search query
+            documents: List of documents to score
+            
+        Returns:
+            List of (document, score) tuples
+        """
+        try:
+            from openai import OpenAI
+            
+            client = OpenAI(api_key=self.api_key)
+            
+            # For each document, ask GPT to rate relevance from 0-100
+            scored_docs = []
+            
+            for i, doc in enumerate(documents):
+                cache_key = f"{query}_{hash(doc.page_content)}"
+                if cache_key in self._scores_cache:
+                    scored_docs.append((doc, self._scores_cache[cache_key]))
+                    continue
+                    
+                prompt = f"""
+                Rate how relevant the following document is to the query. Return ONLY a number between 0 and 100, where:
+                - 0 means completely irrelevant
+                - 100 means perfect match answering the query completely
+                
+                Query: "{query}"
+                
+                Document:
+                {doc.page_content}
+                """
+                
+                response = client.chat.completions.create(
+                    model="gpt-3.5-turbo",  # Use smallest, fastest model for efficiency
+                    max_tokens=5,
+                    temperature=0,
+                    messages=[
+                        {"role": "system", "content": "You are a document relevance rater. Output only a number from 0-100."},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                
+                try:
+                    # Extract score from response
+                    score_text = response.choices[0].message.content.strip()
+                    score = float(score_text) / 100.0  # Normalize to 0-1
+                    
+                    # Cap score at 1.0
+                    score = min(score, 1.0)
+                    
+                    # Cache the score
+                    self._scores_cache[cache_key] = score
+                    
+                    scored_docs.append((doc, score))
+                except (ValueError, IndexError, AttributeError) as e:
+                    logger.error(f"Error parsing score from OpenAI response: {e}")
+                    scored_docs.append((doc, 0.5))  # Default to middle score on error
+            
+            return scored_docs
+            
+        except ImportError:
+            logger.error("OpenAI package not installed. Install with 'pip install openai'")
+            return self.compute_heuristic_scores(query, documents)
+            
+    def _score_with_voyage(self, query: str, documents: List[Document]) -> List[Tuple[Document, float]]:
+        """Use Voyage AI to score documents.
+        
+        Args:
+            query: The search query
+            documents: List of documents to score
+            
+        Returns:
+            List of (document, score) tuples
+        """
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        # Voyage doesn't offer a direct reranking model, but we can use document similarity
+        scored_docs = []
+        
+        try:
+            # First, embed the query
+            query_payload = {
+                "model": "voyage-large-2",
+                "input": query,
+                "task_type": "search_query"
+            }
+            
+            query_response = requests.post(
+                "https://api.voyageai.com/v1/embeddings",
+                headers=headers,
+                json=query_payload
+            )
+            
+            if not query_response.ok:
+                raise Exception(f"Voyage API error: {query_response.status_code}, {query_response.text}")
+                
+            query_embedding = query_response.json()["embeddings"][0]
+            
+            # Then embed each document
+            for doc in documents:
+                cache_key = f"{query}_{hash(doc.page_content)}"
+                if cache_key in self._scores_cache:
+                    scored_docs.append((doc, self._scores_cache[cache_key]))
+                    continue
+                
+                doc_payload = {
+                    "model": "voyage-large-2",
+                    "input": doc.page_content,
+                    "task_type": "retrieval_document"
+                }
+                
+                doc_response = requests.post(
+                    "https://api.voyageai.com/v1/embeddings",
+                    headers=headers,
+                    json=doc_payload
+                )
+                
+                if not doc_response.ok:
+                    logger.error(f"Voyage API error: {doc_response.status_code}, {doc_response.text}")
+                    scored_docs.append((doc, 0.5))  # Default to middle score on error
+                    continue
+                    
+                doc_embedding = doc_response.json()["embeddings"][0]
+                
+                # Calculate cosine similarity as relevance score
+                score = self._cosine_similarity(query_embedding, doc_embedding)
+                
+                # Cache the score
+                self._scores_cache[cache_key] = score
+                
+                scored_docs.append((doc, score))
+            
+            return scored_docs
+            
+        except Exception as e:
+            logger.error(f"Error scoring with Voyage: {str(e)}")
+            return self.compute_heuristic_scores(query, documents)
+            
+    def _cosine_similarity(self, v1, v2):
+        """Calculate cosine similarity between two vectors."""
+        import numpy as np
+        v1, v2 = np.array(v1), np.array(v2)
+        return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+        
+    def _batch_score_documents(self, query: str, documents: List[Document]) -> List[Tuple[Document, float]]:
+        """Score documents in batches for efficiency."""
+        # For large document sets, we'll use heuristic scoring since it's much more efficient
+        # and doesn't require multiple API calls
         return self.compute_heuristic_scores(query, documents)
 
     def compute_heuristic_scores(
@@ -280,10 +519,10 @@ class Reranker:
         if not documents:
             return []
 
-        logger.info(f"Reranking {len(documents)} documents")
+        logger.info(f"Reranking {len(documents)} documents using {self.provider} provider")
         
-        # Generate scores using cross-encoder model or heuristics
-        scored_docs = self.compute_cross_encoder_scores(query, documents)
+        # Generate scores using API provider or fall back to heuristics
+        scored_docs = self.compute_api_scores(query, documents)
         
         # Log scores for debugging
         for i, (doc, score) in enumerate(scored_docs[:5]):
@@ -321,8 +560,8 @@ class Reranker:
         if not documents:
             return []
 
-        # Generate scores using cross-encoder model or heuristics
-        scored_docs = self.compute_cross_encoder_scores(query, documents)
+        # Generate scores using API provider or fall back to heuristics
+        scored_docs = self.compute_api_scores(query, documents)
         
         # Ensure diversity in top results
         diversified_docs = self.diversify_results(scored_docs)

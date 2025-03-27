@@ -85,6 +85,18 @@ To use different certificates:
 1. Edit the `Caddyfile` and update the paths in the `tls` directive
 2. Reload Caddy
 
+## API Keys for External Services
+
+The system uses external API services for advanced functionality. Ensure that the following environment variables are properly set:
+
+| Service | Environment Variable | Purpose |
+|---------|---------------------|---------|
+| Voyage AI | VOYAGE_API_KEY | Document embedding and reranking |
+| OpenAI | OPENAI_API_KEY | Optional for reranking |
+| Other LLM services | Various keys | Document scoring and generation |
+
+These keys are passed to the API container through the Docker Compose environment section. If using a local installation without Docker, ensure these variables are available in your environment.
+
 ## Port Mapping
 
 | Service  | Container Port | Host Port | Purpose |

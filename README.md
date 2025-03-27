@@ -36,9 +36,8 @@ EXASPERATION uses a modular architecture consisting of:
 - Python 3.8+ (Python 3.10 or 3.11 recommended)
 - 8GB+ RAM recommended
 - 2GB disk space for vector database
-- API keys for Voyage AI (embedding), and optionally:
-  - Anthropic API key for Claude
-  - OpenAI API key for GPT models
+- API keys for Voyage AI (embedding and reranking)
+- Optional API keys for additional LLM services
 
 ### Installation
 
