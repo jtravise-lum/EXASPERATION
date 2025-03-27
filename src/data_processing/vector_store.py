@@ -450,3 +450,28 @@ class VectorDatabase:
         except Exception as e:
             logger.error(f"Error deleting collection: {str(e)}")
             raise
+
+
+def get_vector_store() -> VectorDatabase:
+    """Get or create a vector store instance.
+    
+    Returns:
+        Initialized VectorDatabase instance
+    """
+    from src.data_processing.embeddings import MultiModalEmbeddingProvider
+    
+    # Initialize the embedding provider
+    embedding_provider = MultiModalEmbeddingProvider()
+    
+    # Create vector database with default settings
+    vector_db = VectorDatabase(
+        embedding_provider=embedding_provider,
+        # Use settings from config
+        db_path=CHROMA_DB_PATH,
+        collection_name="exabeam_docs",
+        use_server=True,
+        server_host=CHROMA_SERVER_HOST,
+        server_port=CHROMA_SERVER_PORT
+    )
+    
+    return vector_db

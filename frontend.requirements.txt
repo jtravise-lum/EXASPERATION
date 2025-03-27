@@ -1,8 +1,20 @@
 # Frontend dependencies
-streamlit==1.24.0
-requests==2.31.0
-python-dotenv==1.0.0
-pydantic==2.0.3
-httpx==0.24.1
-pytest==7.4.0
-pytest-cov==4.1.0
+streamlit
+requests
+python-dotenv
+pydantic
+httpx
+pytest
+pytest-cov
+
+# API dependencies (needed for models and shared components)
+fastapi
+uvicorn[standard]
+starlette
+python-multipart
+email-validator
+
+# Backend dependencies needed by frontend
+langchain
+langchain_community
+langchain_core

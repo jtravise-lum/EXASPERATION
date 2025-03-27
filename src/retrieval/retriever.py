@@ -26,6 +26,45 @@ class Retriever:
     4. Result diversification
     5. Fallback strategies for failed queries
     """
+    
+    def _normalize_filter(self, filter_dict: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Normalize filter dictionary to be compatible with ChromaDB.
+        
+        Args:
+            filter_dict: The filter dictionary to normalize
+            
+        Returns:
+            Normalized filter dictionary or None
+        """
+        if not filter_dict:
+            return None
+            
+        # For empty filters, return None to avoid ChromaDB errors
+        if not any(filter_dict.values()):
+            return None
+            
+        # For ChromaDB compatibility, we need to convert the filter format
+        normalized = {}
+        
+        # Process each filter type
+        for key, value in filter_dict.items():
+            if isinstance(value, dict) and "$in" in value:
+                # Convert $in operator to ChromaDB's format
+                if value["$in"]:  # Only add if the list is not empty
+                    normalized[key] = {"$in": value["$in"]}
+            elif isinstance(value, dict) and ("$gte" in value or "$lte" in value):
+                # For date ranges, handle differently
+                condition = {}
+                if "$gte" in value:
+                    condition["$gte"] = value["$gte"]
+                if "$lte" in value:
+                    condition["$lte"] = value["$lte"]
+                normalized[key] = condition
+            elif value:  # Only add non-empty values
+                normalized[key] = value
+                
+        # Return None if no valid filters remain
+        return normalized if normalized else None
 
     def __init__(
         self,
@@ -164,19 +203,22 @@ class Retriever:
         
         # Perform vector search
         try:
+            # Normalize filter for compatibility with ChromaDB
+            normalized_filter = self._normalize_filter(filter)
+            
             # Compatibility with different VectorDatabase implementations
             if hasattr(self.vector_db, 'similarity_search_by_vector'):
                 results = self.vector_db.similarity_search_by_vector(
                     embedding=query_embedding,
                     k=search_k,
-                    filter=filter
+                    filter=normalized_filter
                 )
             else:
                 # Fallback to standard similarity search
                 results = self.vector_db.similarity_search(
                     query=query,
                     k=search_k, 
-                    filter=filter,
+                    filter=normalized_filter,
                     query_type=query_type
                 )
             logger.info(f"Vector search found {len(results)} documents")
@@ -211,19 +253,22 @@ class Retriever:
         if keywords:
             keyword_query = " ".join(keywords)
             try:
+                # Normalize filter for compatibility with ChromaDB
+                normalized_filter = self._normalize_filter(filter)
+                
                 # Compatibility with different VectorDatabase implementations
                 if hasattr(self.vector_db, 'keyword_search'):
                     results = self.vector_db.keyword_search(
                         query=keyword_query,
                         k=search_k,
-                        filter=filter
+                        filter=normalized_filter
                     )
                 else:
                     # Fallback to standard similarity search
                     results = self.vector_db.similarity_search(
                         query=keyword_query,
                         k=search_k,
-                        filter=filter
+                        filter=normalized_filter
                     )
                 logger.info(f"Keyword search found {len(results)} documents")
                 return results
@@ -437,19 +482,22 @@ class Retriever:
         
         # Perform similarity search with scores
         try:
+            # Normalize filter for compatibility with ChromaDB
+            normalized_filter = self._normalize_filter(combined_filter)
+            
             # Compatibility with different VectorDatabase implementations
             if hasattr(self.vector_db, 'similarity_search_by_vector_with_score'):
                 retrieved_docs = self.vector_db.similarity_search_by_vector_with_score(
                     embedding=query_embedding,
                     k=self.top_k,
-                    filter=combined_filter
+                    filter=normalized_filter
                 )
             else:
                 # Fallback to standard similarity search with score
                 retrieved_docs = self.vector_db.similarity_search_with_score(
                     query=processed_query,
                     k=self.top_k,
-                    filter=combined_filter,
+                    filter=normalized_filter,
                     query_type=self.query_processor.detect_query_type(query)
                 )
             
