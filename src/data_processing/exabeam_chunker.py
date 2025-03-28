@@ -1,6 +1,7 @@
 """Document chunking strategies for Exabeam Content-Library-CIM2 repository."""
 
 import logging
+import os
 import re
 from typing import Dict, List, Any, Optional, Callable, Union
 
@@ -9,18 +10,24 @@ from langchain.text_splitter import (
     RecursiveCharacterTextSplitter,
     MarkdownHeaderTextSplitter,
 )
+from src.data_processing.semantic_document_chunker import SemanticDocumentChunker
 
 logger = logging.getLogger(__name__)
 
 
 class ExabeamChunker:
-    """Advanced document chunking for Exabeam Content-Library-CIM2 documents."""
+    """Advanced document chunking for Exabeam Content-Library-CIM2 documents.
+    
+    This implementation now integrates the semantic chunking capabilities
+    to provide more intelligent, context-aware chunking for all document types.
+    """
 
     def __init__(
         self,
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
         keep_separator: bool = True,
+        use_semantic_chunking: bool = os.environ.get("EXASPERATION_USE_SEMANTIC_CHUNKING", "true").lower() == "true",
     ):
         """Initialize the Exabeam document chunker.
 
@@ -28,12 +35,22 @@ class ExabeamChunker:
             chunk_size: The size of each text chunk
             chunk_overlap: The amount of overlap between chunks
             keep_separator: Whether to keep the separator in the chunks
+            use_semantic_chunking: Whether to use the enhanced semantic chunking (recommended)
         """
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.keep_separator = keep_separator
+        self.use_semantic_chunking = use_semantic_chunking
         
-        # Default text splitter for general content
+        # Initialize semantic chunker if enabled
+        if self.use_semantic_chunking:
+            self.semantic_chunker = SemanticDocumentChunker(
+                chunk_size=self.chunk_size,
+                chunk_overlap=self.chunk_overlap
+            )
+            logger.info("Using enhanced semantic chunking capabilities")
+        
+        # Default text splitter for fallback
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,
@@ -51,6 +68,13 @@ class ExabeamChunker:
         """
         logger.info(f"Splitting {len(documents)} documents into chunks using Exabeam chunker")
         
+        # If semantic chunking is enabled, use it for all documents
+        if self.use_semantic_chunking:
+            chunks = self.semantic_chunker.split_documents(documents)
+            logger.info(f"Created {len(chunks)} chunks using semantic chunking")
+            return chunks
+        
+        # If semantic chunking is disabled, use the original chunking approach
         all_chunks = []
         for doc in documents:
             # Apply different chunking strategies based on document type
@@ -61,7 +85,7 @@ class ExabeamChunker:
         for i, chunk in enumerate(all_chunks):
             chunk.metadata["chunk_id"] = i
             
-        logger.info(f"Created {len(all_chunks)} chunks")
+        logger.info(f"Created {len(all_chunks)} chunks using standard chunking")
         return all_chunks
     
     def _split_document_by_type(self, document: Document) -> List[Document]:

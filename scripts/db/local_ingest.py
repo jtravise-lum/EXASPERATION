@@ -20,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Add the project root to Python path
-sys.path.append(str(Path(__file__).resolve().parent))
+sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 # Import the necessary modules
 from langchain.schema import Document
@@ -59,7 +59,8 @@ def sanitize_metadata(metadata):
 
 def ingest_documents(content_dir, batch_size=20, max_docs=None, reset=False):
     """Process documents and add them to ChromaDB in local mode."""
-    local_db_path = os.path.join(os.getcwd(), "data", "local_chromadb")
+    # Use environment variable for database path if provided
+    local_db_path = os.environ.get("EXASPERATION_DB_PATH", os.path.join(os.getcwd(), "data", "local_chromadb"))
     logger.info(f"Using local ChromaDB at: {local_db_path}")
     
     if reset and os.path.exists(local_db_path):

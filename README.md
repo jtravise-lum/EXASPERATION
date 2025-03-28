@@ -22,7 +22,10 @@ Exabeam's documentation, while comprehensive, can be challenging to navigate. Wi
 
 EXASPERATION uses a modular architecture consisting of:
 
-1. **Document Processing Pipeline**: Chunks Exabeam documentation and extracts metadata
+1. **Document Processing Pipeline**: 
+   - Enhanced semantic chunking for optimal document splitting
+   - Intelligent boundary detection and content-aware processing
+   - Metadata extraction and entity recognition
 2. **Vector Database**: Stores embeddings of document chunks for semantic search
 3. **Retrieval Engine**: Finds the most relevant documentation segments for a given query
 4. **LLM Integration**: Generates human-readable responses based on retrieved context
@@ -89,6 +92,26 @@ For local ChromaDB installation (not recommended), set `use_server=False` when i
 - Python 3.12+ may have compatibility issues with some packages - use Python 3.10-3.11 for best results
 
 ### Usage
+
+#### Processing Documents with Enhanced Semantic Chunking
+
+EXASPERATION now features enhanced semantic chunking that significantly improves retrieval quality. Use the ingestion wrapper script for easy document processing:
+
+```bash
+# Process documents with enhanced semantic chunking (default)
+./run_ingestion.sh
+
+# Process a specific directory with a limit for testing
+./run_ingestion.sh --dir data/CIMLibrary/ActivityTypes --max 10
+
+# Reset the database and use standard (non-semantic) chunking
+./run_ingestion.sh --reset --standard
+
+# For full documentation on ingestion options
+./run_ingestion.sh --help
+```
+
+See [INGESTION.md](INGESTION.md) for detailed information about the ingestion process and chunking options.
 
 #### Testing the Query Engine
 
@@ -158,6 +181,7 @@ The API runs on port 8888 by default.
 - [x] Web interface for searching and viewing results
 - [x] API layer for frontend-backend communication
 - [x] User feedback mechanism for rating responses
+- [x] Enhanced semantic chunking for improved retrieval quality
 - [ ] Add support for PDF documentation
 - [ ] Enhanced analytics and usage tracking
 - [ ] Create CLI interface for integration with scripts
