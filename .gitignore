@@ -161,8 +161,29 @@ dmypy.json
 cython_debug/
 
 # Project specific
-data/
-results/
+data/*
+!data/.gitkeep
+data/chromadb/*
+!data/chromadb/.gitkeep
+data/local_chromadb/*
+!data/local_chromadb/.gitkeep
+data/chromadb.backup/*
+!data/chromadb.backup/.gitkeep
+data/CIMLibrary/*
+!data/CIMLibrary/.gitkeep
+data/Content-Library-CIM1/*
+!data/Content-Library-CIM1/.gitkeep
+data/Content-Library-CIM2/*
+!data/Content-Library-CIM2/.gitkeep
+
+results/*
+!results/.gitkeep
+results/data_source/*
+!results/data_source/.gitkeep
+results/parser/*
+!results/parser/.gitkeep
+results/use_case/*
+!results/use_case/.gitkeep
 **/api_venv/
 **/frontend_venv/
 chromadb_venv/
