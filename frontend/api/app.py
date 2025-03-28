@@ -143,7 +143,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 
 # Health check endpoint
-@app.get("/health")
+@app.get("/v1/health")
 async def health_check():
     """Health check endpoint.
     

@@ -1,7 +1,8 @@
-"""Main Streamlit application for EXASPERATION."""
+"""Main Streamlit application for EXABOMINATION."""
 
 import streamlit as st
 from typing import Dict, Any
+import time
 
 # Import components
 from frontend.components.search_interface import search_interface, query_history_sidebar
@@ -17,26 +18,339 @@ from frontend.config import (
     DEFAULT_MAX_RESULTS,
     DEFAULT_THRESHOLD,
     DEFAULT_INCLUDE_METADATA,
-    DEFAULT_RERANK,
-    THEME_PRIMARY_COLOR
+    DEFAULT_RERANK
 )
 
 # Set page config
 st.set_page_config(
-    page_title="EXASPERATION - Exabeam Documentation Search",
-    page_icon="🔍",
+    page_title="EXABOMINATION - Exabeam CIM Documentation Search",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # Apply custom CSS
-st.markdown(f"""
+st.markdown("""
 <style>
-    .stApp {{color: #333333;}}
-    .stButton button {{background-color: {THEME_PRIMARY_COLOR}; color: white;}}
-    a {{color: {THEME_PRIMARY_COLOR};}}
-    .stProgress .st-bo {{background-color: {THEME_PRIMARY_COLOR};}}
+    /* Main color scheme */
+    :root {
+        --primary-color: #0f4880;
+        --secondary-color: #00b3e6;
+        --accent-color: #ffcc00; 
+        --dark-bg: #121621;
+        --text-color: #ffffff;
+        --panel-bg: #1e2639;
+    }
+    
+    /* Base styling */
+    .main {
+        background-color: var(--dark-bg);
+        color: var(--text-color);
+        font-family: 'Courier New', monospace;
+    }
+    
+    .sidebar .sidebar-content {
+        background-color: var(--panel-bg);
+    }
+    
+    /* Header styling */
+    .main-header {
+        text-align: center;
+        padding: 1.5rem;
+        background-color: var(--panel-bg);
+        border: 2px solid var(--secondary-color);
+        border-radius: 5px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 0 15px rgba(0, 179, 230, 0.5);
+    }
+    
+    .main-header h1 {
+        margin: 0;
+        font-weight: 700;
+        color: var(--accent-color);
+        font-family: 'Impact', sans-serif;
+        letter-spacing: 2px;
+        text-shadow: 0 0 10px rgba(255, 204, 0, 0.7);
+    }
+    
+    .main-header p {
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+        font-style: italic;
+    }
+    
+    /* Card styling with improved aesthetics */
+    .card {
+        background-color: var(--panel-bg);
+        border-radius: 8px;
+        border: 1px solid var(--secondary-color);
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 179, 230, 0.3);
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .card:hover {
+        box-shadow: 0 6px 16px rgba(0, 179, 230, 0.4);
+    }
+    
+    /* Source card styling */
+    .source-card {
+        background-color: rgba(30, 38, 57, 0.8);
+        border-radius: 8px;
+        border: 1px solid var(--secondary-color);
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .source-card:hover {
+        box-shadow: 0 0 20px rgba(0, 179, 230, 0.6);
+        transform: translateY(-3px);
+    }
+    
+    .source-card .metadata-tag {
+        display: inline-block;
+        background-color: rgba(15, 72, 128, 0.7);
+        color: var(--text-color);
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .source-card .relevance-meter {
+        height: 4px;
+        background-color: var(--accent-color);
+        position: absolute;
+        bottom: 0;
+        left: 0;
+    }
+    
+    /* Button styling */
+    .stButton button {
+        background-color: var(--primary-color);
+        color: var(--text-color);
+        font-weight: 500;
+        border-radius: 5px;
+        border: 1px solid var(--secondary-color);
+        padding: 0.5rem 1rem;
+        transition: all 0.3s ease;
+        font-family: 'Courier New', monospace;
+    }
+    
+    .stButton button:hover {
+        background-color: var(--secondary-color);
+        box-shadow: 0 0 15px rgba(0, 179, 230, 0.7);
+        transform: translateY(-2px);
+    }
+    
+    /* Search box styling */
+    .stTextInput > div > div > input {
+        background-color: var(--panel-bg) !important;
+        color: var(--text-color) !important;
+        border-radius: 5px;
+        border: 1px solid var(--secondary-color) !important;
+        padding: 0.75rem 1rem;
+        box-shadow: 0 0 10px rgba(0, 179, 230, 0.3);
+        font-family: 'Courier New', monospace;
+    }
+    
+    /* Sources styling */
+    .source-header {
+        background-color: rgba(15, 72, 128, 0.5);
+        padding: 0.75rem 1rem;
+        border-radius: 5px;
+        margin-bottom: 0.5rem;
+        border-left: 4px solid var(--secondary-color);
+    }
+    
+    /* Lightning animation */
+    @keyframes lightning {
+        0% { opacity: 0; }
+        10% { opacity: 1; }
+        20% { opacity: 0; }
+        30% { opacity: 1; }
+        40% { opacity: 0; }
+        100% { opacity: 0; }
+    }
+    
+    .lightning {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.1);
+        pointer-events: none;
+        animation: lightning 5s infinite;
+        z-index: 1000;
+        display: none;
+    }
+    
+    /* Loading animation */
+    .loading-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 2rem 0;
+        height: 60px;
+    }
+    
+    .tesla-coil {
+        width: 50px;
+        height: 60px;
+        background-color: var(--secondary-color);
+        position: relative;
+        border-radius: 5px 5px 20px 20px;
+        overflow: hidden;
+    }
+    
+    .tesla-coil:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to bottom, transparent, rgba(0, 179, 230, 0.8));
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: translateY(60px); }
+        50% { transform: translateY(0); }
+        100% { transform: translateY(60px); }
+    }
+    
+    .spark {
+        position: absolute;
+        width: 20px;
+        height: 4px;
+        background-color: var(--accent-color);
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        box-shadow: 0 0 10px var(--accent-color);
+        animation: spark 0.5s infinite;
+    }
+    
+    @keyframes spark {
+        0% { width: 0; opacity: 0; }
+        50% { width: 20px; opacity: 1; }
+        100% { width: 0; opacity: 0; }
+    }
+    
+    /* Logo placeholder */
+    .logo-placeholder {
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        text-align: center;
+        background: linear-gradient(135deg, var(--panel-bg), var(--primary-color));
+        border-radius: 5px;
+        border: 1px solid var(--secondary-color);
+        box-shadow: 0 0 10px rgba(0, 179, 230, 0.3);
+    }
+    
+    /* Footer */
+    .footer {
+        text-align: center;
+        margin-top: 3rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--secondary-color);
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.8rem;
+    }
+    
+    /* API Connection indicator */
+    .api-indicator {
+        position: fixed;
+        bottom: 15px;
+        right: 15px;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        opacity: 0.8;
+        z-index: 999;
+        box-shadow: 0 0 5px currentColor;
+    }
+    
+    .api-indicator.connected {
+        background-color: #4CAF50;
+        border: 1px solid #2E7D32;
+    }
+    
+    .api-indicator.disconnected {
+        background-color: #F44336;
+        border: 1px solid #B71C1C;
+    }
+    
+    .api-indicator.unknown {
+        background-color: #FF9800;
+        border: 1px solid #E65100;
+    }
+    
+    /* Pulse animation for API indicator */
+    @keyframes api-pulse {
+        0% { transform: scale(1); opacity: 0.7; }
+        50% { transform: scale(1.1); opacity: 1; }
+        100% { transform: scale(1); opacity: 0.7; }
+    }
+    
+    .api-indicator {
+        animation: api-pulse 2s infinite ease-in-out;
+    }
+    
+    /* Tooltip for API indicator */
+    .api-indicator-container {
+        position: fixed;
+        bottom: 15px;
+        right: 15px;
+        z-index: 999;
+    }
+    
+    .api-tooltip {
+        position: absolute;
+        bottom: 25px;
+        right: 0;
+        background-color: var(--panel-bg);
+        color: var(--text-color);
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        border: 1px solid var(--secondary-color);
+        box-shadow: 0 0 5px rgba(0, 179, 230, 0.5);
+        pointer-events: none;
+    }
+    
+    .api-indicator-container:hover .api-tooltip {
+        opacity: 1;
+    }
 </style>
+
+<div class="lightning" id="lightning"></div>
+
+<script>
+// Trigger lightning occasionally
+function triggerLightning() {
+    setTimeout(function() {
+        document.getElementById('lightning').style.display = 'block';
+        setTimeout(function() {
+            document.getElementById('lightning').style.display = 'none';
+            triggerLightning();
+        }, 500);
+    }, Math.random() * 20000 + 5000); // Random timing between 5-25 seconds
+}
+
+triggerLightning();
+</script>
 """, unsafe_allow_html=True)
 
 # Initialize session state
@@ -52,224 +366,109 @@ def init_session_state():
         st.session_state.metadata_options = None
     if "current_query" not in st.session_state:
         st.session_state.current_query = ""
+    if "api_status" not in st.session_state:
+        st.session_state.api_status = "unknown"  # "connected", "disconnected", or "unknown"
 
 # Initialize session state
 init_session_state()
 
-# Define a cached search function outside of any class
-@st.cache_data(ttl=300)  # Cache for 5 minutes
-def cached_search(query: str, filters_json: str, options_json: str, api_url: str, headers_dict: Dict):
-    """Perform search with caching.
-    
-    Args:
-        query: Search query
-        filters_json: JSON string of filters
-        options_json: JSON string of options
-        api_url: API URL
-        headers_dict: Headers dictionary
-        
-    Returns:
-        Search response or error
-    """
+# Check API availability
+def check_api_status():
+    """Check if API is available."""
     try:
-        # Parse JSON strings back to objects if provided
-        filters = None if not filters_json else SearchFilters.model_validate_json(filters_json)
-        options = None if not options_json else SearchOptions.model_validate_json(options_json)
-        
-        # Create request
-        search_request = SearchRequest(
-            query=query,
-            filters=filters,
-            options=options
-        )
-        
-        # Make API call
-        client = httpx.Client(timeout=30)
-        response = client.post(
-            api_url, 
-            headers=headers_dict,
-            content=search_request.model_dump_json()
-        )
-        
-        if response.status_code == 200:
-            return SearchResponse.model_validate(response.json())
-        else:
-            return ErrorResponse.model_validate(response.json())
+        # Use the is_api_available method from api_client
+        api_available = api_client.is_api_available()
+        st.session_state.api_status = "connected" if api_available else "disconnected"
     except Exception as e:
-        # Create error response
-        return ErrorResponse(
-            error={
-                "code": "connection_error",
-                "message": f"Failed to connect to API: {str(e)}",
-                "details": {"reason": "network_error"}
-            },
-            request_id=f"local_{int(time.time())}"
-        )
+        st.session_state.api_status = "disconnected"
+        
+# Run API check on startup
+check_api_status()
 
-# Define search function
+# Import HTTPClient to make direct API calls without caching
+import httpx
+import json
+from frontend.api.models import SearchRequest
+
+# Define search function without using the cached method
 def perform_search(query: str, filters: Dict[str, Any]):
-    """Perform search using the API client.
-    
-    Args:
-        query: The search query
-        filters: Search filters
-    """
+    """Perform search using direct API call to avoid caching issues."""
     # Set loading state
     st.session_state.loading = True
     st.session_state.search_error = None
     
-    # Show a debug message at the top
+    # Debug container
     debug_container = st.empty()
-    debug_container.info(f"Searching for: {query}")
     
-    # Convert filters dict to SearchFilters object and serialize to JSON
+    # Convert filters dict to SearchFilters object
     search_filters = SearchFilters(**filters) if filters else None
-    filters_json = "" if search_filters is None else search_filters.model_dump_json()
     
-    # Create search options and serialize to JSON
+    # Create search options
     search_options = SearchOptions(
         max_results=DEFAULT_MAX_RESULTS,
         include_metadata=DEFAULT_INCLUDE_METADATA,
         rerank=DEFAULT_RERANK,
         threshold=DEFAULT_THRESHOLD
     )
-    options_json = search_options.model_dump_json()
     
     try:
-        # Make API call using cached function
-        api_url = f"{api_client.base_url}/search"
-        debug_container.info(f"Calling API at: {api_url}")
+        # Create search request
+        search_request = SearchRequest(
+            query=query,
+            filters=search_filters,
+            options=search_options
+        )
         
-        # Try a direct API call first for debugging
-        try:
-            search_request = SearchRequest(
-                query=query,
-                filters=search_filters,
-                options=search_options
-            )
-            direct_client = httpx.Client(timeout=30)
-            direct_response = direct_client.post(
-                api_url, 
-                headers=api_client.headers,
-                content=search_request.model_dump_json()
-            )
-            debug_container.info(f"Direct API call status: {direct_response.status_code}")
-            
-            # If successful, try to parse the response manually for debugging
-            if direct_response.status_code == 200:
-                try:
-                    response_data = direct_response.json()
-                    # Check a few key fields
-                    debug_container.info(f"Response has {len(response_data.get('sources', []))} sources")
-                    for i, source in enumerate(response_data.get('sources', [])[:3]):
-                        debug_container.info(f"Source {i} chunk_id: {source.get('chunk_id')} (type: {type(source.get('chunk_id')).__name__})")
-                except Exception as parse_err:
-                    debug_container.warning(f"Failed to parse response: {str(parse_err)}")
-        except Exception as direct_err:
-            debug_container.warning(f"Direct API call failed: {str(direct_err)}")
-            
-            # If in development mode, create mock response
-            if dev_mode:
-                debug_container.info("Using mock data in development mode")
-                import uuid
-                from datetime import datetime
-                
-                # Create mock search response
-                st.session_state.search_results = SearchResponse(
-                    request_id=f"mock_{uuid.uuid4().hex[:12]}",
-                    query=query,
-                    answer=f"This is a mock answer for development purposes. The API is not available or couldn't be connected to. Your query was: **{query}**",
-                    sources=[
-                        SourceDocument(
-                            id="mock_doc_1",
-                            title="Mock Documentation",
-                            url="https://docs.exabeam.com/example",
-                            chunk_id="mock_1",
-                            content="This is simulated content for the mock response. It contains information related to your query about " + query,
-                            relevance_score=0.95,
-                            metadata=DocumentMetadata(
-                                document_type="use_case",
-                                vendor="microsoft",
-                                product="active_directory",
-                                created_at=datetime.now().isoformat(),
-                                updated_at=datetime.now().isoformat()
-                            )
-                        ),
-                        SourceDocument(
-                            id="mock_doc_2",
-                            title="Additional Documentation",
-                            url="https://docs.exabeam.com/related",
-                            chunk_id="mock_2",
-                            content="This is additional mock content related to " + query,
-                            relevance_score=0.82,
-                            metadata=DocumentMetadata(
-                                document_type="tutorial",
-                                vendor="cisco",
-                                product="asa",
-                                created_at=datetime.now().isoformat(),
-                                updated_at=datetime.now().isoformat()
-                            )
-                        )
-                    ],
-                    suggested_queries=[
-                        f"How to configure {query}?",
-                        f"What are the requirements for {query}?",
-                        f"Tell me more about {query}"
-                    ],
-                    metadata=SearchMetadata(
-                        processing_time_ms=125,
-                        filter_count=len(filters) if filters else 0,
-                        total_matches=2,
-                        threshold_applied=DEFAULT_THRESHOLD
-                    )
-                )
-                
-                debug_container.success("Created mock response for development")
-                return
+        # Make direct API call instead of using the cached method
+        url = f"{api_client.base_url}/search"
         
-        # If not in dev mode or direct API call was successful, use the cached function
-        result = cached_search(query, filters_json, options_json, api_url, api_client.headers)
+        # Create a client with timeout
+        client = httpx.Client(timeout=api_client.timeout)
         
-        # Check if result is an error
-        if isinstance(result, ErrorResponse):
-            st.session_state.search_error = result
-            debug_container.error(f"Search error: {result.error}")
-        else:
+        # Make the request
+        response = client.post(
+            url,
+            headers=api_client.headers,
+            content=search_request.model_dump_json()
+        )
+        
+        # Update API status to connected on successful call
+        st.session_state.api_status = "connected"
+        
+        # Process the response
+        if response.status_code == 200:
+            result = SearchResponse.model_validate(response.json())
             st.session_state.search_results = result
-            debug_container.success("Search successful!")
+        else:
+            error_result = ErrorResponse.model_validate(response.json())
+            st.session_state.search_error = error_result
             
     except Exception as e:
-        # Create an error response without importing locally
+        # Update API status to disconnected on failed call
+        st.session_state.api_status = "disconnected"
+        
+        # Create an error response
         st.session_state.search_error = ErrorResponse(
             error={
                 "code": "internal_error",
-                "message": f"An error occurred: {str(e)}",
+                "message": f"The monster refuses to cooperate: {str(e)}",
                 "details": {"reason": "exception"}
             },
-            request_id="local_error"
+            request_id="monster_error"
         )
-        debug_container.error(f"Exception during search: {str(e)}")
     finally:
         # Reset loading state
         st.session_state.loading = False
-        # Remove debug messages after successful load
         debug_container.empty()
 
 # Function to handle filter changes
 def handle_filter_change(filters: SearchFilters):
-    """Handle filter changes and re-run search if needed.
-    
-    Args:
-        filters: Updated filters
-    """
+    """Handle filter changes and re-run search if needed."""
     # Only re-run search if we have a current query
     if st.session_state.current_query:
         perform_search(st.session_state.current_query, filters.model_dump())
 
-# Display the query history in the sidebar
-query_history_sidebar()
-
-# Import needed models at the module level
+# Import additional models needed
 from frontend.api.models import (
     MetadataOptionsResponse, 
     ErrorResponse,
@@ -278,231 +477,172 @@ from frontend.api.models import (
     SearchOptions,
     SearchRequest
 )
-import httpx
-import time
 
-# Define a cached function outside of any class to fetch metadata options
-@st.cache_data(ttl=3600)  # Cache for 1 hour
-def fetch_metadata_options(api_url, headers_dict):
-    """Fetch metadata options from API with caching.
-    
-    Args:
-        api_url: Full API URL
-        headers_dict: Headers dictionary
-        
-    Returns:
-        Metadata options or None if error
-    """
-    try:
-        client = httpx.Client(timeout=30)
-        response = client.get(api_url, headers=headers_dict)
-        
-        if response.status_code == 200:
-            return MetadataOptionsResponse.model_validate(response.json())
-        return None
-    except Exception as e:
-        st.warning(f"Failed to fetch metadata options: {str(e)}")
-        return None
-
-# Display API connection debug info 
-st.sidebar.write("### API Connection")
-st.sidebar.write(f"API URL: {api_client.base_url}")
-
-# Create an expandable section for detailed connection info
-with st.sidebar.expander("Connection Details", expanded=True):
-    # Get API URL config from environment
-    import os
-    from dotenv import load_dotenv
-    load_dotenv(".env.frontend")
-    
-    env_api_url = os.getenv("EXASPERATION_API_URL", "Not set")
-    st.write(f"**Environment API URL:** {env_api_url}")
-    
-    # Test multiple possible API endpoints
-    import socket
-    import httpx
-    from urllib.parse import urlparse
-    
-    def check_port_open(host, port):
-        """Check if a port is open on a host."""
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(1)
-            result = sock.connect_ex((host, port))
-            sock.close()
-            return result == 0
-        except:
-            return False
-    
-    # Parse the current API URL
-    parsed_url = urlparse(api_client.base_url)
-    host = parsed_url.hostname or 'localhost'
-    port = parsed_url.port or 8888
-    
-    # Check the configured port
-    if check_port_open(host, port):
-        st.success(f"✅ Port {port} is open on {host}")
-    else:
-        st.error(f"❌ Port {port} is not accessible on {host}")
-    
-    # Check other common ports
-    other_ports = [8000, 8080, 5000, 3000]
-    st.write("### Checking other common ports:")
-    
-    for test_port in other_ports:
-        if check_port_open(host, test_port):
-            st.success(f"✅ Port {test_port} is open on {host}")
-        else:
-            st.warning(f"❌ Port {test_port} is not accessible on {host}")
-    
-    # Try to list running processes with ports (Linux only)
-    try:
-        import subprocess
-        st.write("### Running processes with network ports:")
-        result = subprocess.run(
-            ["netstat", "-tulpn"], 
-            capture_output=True, 
-            text=True, 
-            timeout=5
-        )
-        if result.returncode == 0:
-            st.code(result.stdout)
-        else:
-            st.error(f"Failed to run netstat: {result.stderr}")
-    except Exception as e:
-        st.warning(f"Could not list running processes: {str(e)}")
-    
-    # Try connecting to health endpoints on different ports
-    ports_to_try = [port] + other_ports
-    for test_port in ports_to_try:
-        health_url = f"http://{host}:{test_port}/health"
-        st.write(f"Testing health endpoint: {health_url}")
-        
-        try:
-            response = httpx.get(health_url, timeout=1)
-            if response.status_code == 200:
-                st.success(f"✅ Health endpoint accessible on port {test_port}!")
-                st.json(response.json() if response.headers.get('content-type') == 'application/json' else response.text)
-                
-                # If this is not our configured port, suggest updating the config
-                if test_port != port:
-                    st.info(f"Consider updating EXASPERATION_API_URL in .env.frontend to use port {test_port}")
-            else:
-                st.error(f"API returned error: {response.status_code}")
-        except Exception as e:
-            st.warning(f"Could not connect to {health_url}: {str(e)}")
-    
-# Add dev mode toggle for when API is not available
+# Logo in sidebar
 with st.sidebar:
-    dev_mode = st.checkbox("Development Mode (Mock Data)", value=True)
+    # Display logo with styled text
+    st.markdown("""
+    <div class="logo-placeholder">
+        <div style="font-size:2.5rem;margin-bottom:0.5rem;">⚡ 📚</div>
+        <h3 style="margin:0;color:#ffcc00;text-shadow:0 0 5px #ffcc00;">EXABOMINATION</h3>
+        <p style="font-size:0.8rem;margin:0;color:#00b3e6;font-style:italic;">Exabeam Documentation Search</p>
+    </div>
+    """, unsafe_allow_html=True)
+    # Use dev_mode for simulation only, but don't show the checkbox
+    dev_mode = True
 
-# Display the filters panel
+# Display the query history in the sidebar
+query_history_sidebar()
+
+# Get metadata options for filters
 try:
-    # Get metadata options from API if not already loaded
+    # Get or create metadata options (with mock fallback)
     if st.session_state.metadata_options is None:
-        # Fetch metadata options from API using the cached function
-        api_url = f"{api_client.base_url}/metadata/options"
-        st.sidebar.write(f"Metadata URL: {api_url}")
-        
-        # Direct, non-cached call for debugging (don't show headers in UI)
-        try:
-            direct_response = httpx.get(api_url, headers=api_client.headers, timeout=5)
-            st.sidebar.write(f"Direct metadata call status: {direct_response.status_code}")
-            if direct_response.status_code == 200:
-                st.sidebar.write("Direct call successful")
-            else:
-                st.sidebar.write(f"Direct response: {direct_response.text[:100]}...")
-        except Exception as e:
-            st.sidebar.error(f"Direct metadata call failed: {str(e)}")
-            
-            # If in dev mode and API is not available, create mock metadata
-            if dev_mode:
-                st.sidebar.info("Using mock metadata in development mode")
-                st.session_state.metadata_options = MetadataOptionsResponse(
-                    document_types=[
-                        "use_case",
-                        "parser",
-                        "rule",
-                        "data_source",
-                        "overview",
-                        "tutorial"
-                    ],
-                    vendors=[
-                        "microsoft",
-                        "cisco",
-                        "okta",
-                        "palo_alto",
-                        "aws"
-                    ],
-                    products={
-                        "microsoft": [
-                            "active_directory",
-                            "azure_ad",
-                            "exchange_online",
-                            "windows"
-                        ],
-                        "cisco": [
-                            "asa",
-                            "firepower",
-                            "ise",
-                            "meraki"
-                        ],
-                        "okta": [
-                            "identity_cloud"
-                        ]
-                    },
-                    use_cases=[
-                        "account_takeover",
-                        "data_exfiltration",
-                        "lateral_movement",
-                        "privilege_escalation"
-                    ],
-                    date_range={
-                        "oldest": "2022-01-15",
-                        "newest": "2025-03-27"
-                    }
-                )
-        
-        # Try cached call if no mock data was set
-        if st.session_state.metadata_options is None:
-            metadata_options = fetch_metadata_options(api_url, api_client.headers)
-            if metadata_options:
-                st.session_state.metadata_options = metadata_options
-                st.sidebar.success("Metadata options loaded successfully")
-            else:
-                st.sidebar.warning("Failed to load metadata options from API")
-                
-                # If all attempts failed and we're in dev mode, use mock data
-                if dev_mode and st.session_state.metadata_options is None:
-                    st.sidebar.info("Using mock metadata in development mode")
-                    st.session_state.metadata_options = MetadataOptionsResponse(
-                        document_types=["use_case", "parser", "rule"],
-                        vendors=["microsoft", "cisco"],
-                        products={
-                            "microsoft": ["active_directory", "windows"],
-                            "cisco": ["asa", "firepower"]
-                        },
-                        use_cases=["account_takeover", "lateral_movement"],
-                        date_range={"oldest": "2022-01-15", "newest": "2025-03-27"}
-                    )
+        # If in dev mode and API is not available, use mock data
+        if dev_mode:
+            st.session_state.metadata_options = MetadataOptionsResponse(
+                document_types=["use_case", "parser", "rule", "data_source", "overview", "tutorial"],
+                vendors=["microsoft", "cisco", "okta", "palo_alto", "aws"],
+                products={
+                    "microsoft": ["active_directory", "azure_ad", "exchange_online", "windows"],
+                    "cisco": ["asa", "firepower", "ise", "meraki"],
+                    "okta": ["identity_cloud"]
+                },
+                use_cases=["account_takeover", "data_exfiltration", "lateral_movement", "privilege_escalation"],
+                date_range={"oldest": "2022-01-15", "newest": "2025-03-27"}
+            )
     
     # Use available metadata options 
     filters = filters_panel(handle_filter_change, st.session_state.metadata_options)
 except Exception as e:
     st.sidebar.error(f"Could not load filters: {str(e)}")
-    st.error(f"Error details: {str(e)}")
 
 # Main app layout
 st.write("")
 
-# Display the search interface
-current_query = search_interface(
-    on_search=perform_search,
-    loading=st.session_state.loading
-)
+# Custom header with improved branding
+st.markdown("""
+<div class="main-header">
+    <h1>EXABOMINATION</h1>
+    <p>Exabeam Common Information Model Documentation Search</p>
+    <div style="position: absolute; right: 15px; top: 15px; font-size: 1.2rem;">📚 CIM</div>
+</div>
+""", unsafe_allow_html=True)
+
+# Skip rendering the normal search interface header and render the component in a card
+# This is the key change - we're customizing how we render the search_interface component
+st.markdown("""<div class="card">""", unsafe_allow_html=True)
+
+# Create container to hold search interface
+search_container = st.container()
+with search_container:
+    # Instead of calling search_interface directly, we'll call it with a custom wrapper
+    # that skips rendering the title that contains "EXASPERATION"
+    
+    # This simulates the core functionality of search_interface without the header
+    # The form and other elements that would normally be part of search_interface
+    with st.form(key="search_form", clear_on_submit=False):
+        col1, col2 = st.columns([6, 1])
+        
+        with col1:
+            query = st.text_input(
+                "Enter your question",
+                value=st.session_state.get("current_query", ""),
+                placeholder="e.g., How does the password reset detection rule work?",
+                disabled=st.session_state.loading,
+                key="query_input"
+            )
+        
+        with col2:
+            submit_button = st.form_submit_button(
+                "Search", 
+                disabled=st.session_state.loading,
+                use_container_width=True,
+                type="primary"
+            )
+        
+        # Advanced filters expander (to be implemented)
+        with st.expander("Advanced filters", expanded=False):
+            st.info("Filter the results with Mad Scientist precision.")
+    
+    # Process form submission
+    if submit_button and query and not st.session_state.loading:
+        st.session_state.current_query = query
+        
+        # Add to query history if not already present
+        if "query_history" in st.session_state:
+            if query not in st.session_state.query_history:
+                st.session_state.query_history = [query] + st.session_state.query_history
+                if len(st.session_state.query_history) > 10:  # Limit history size
+                    st.session_state.query_history = st.session_state.query_history[:10]
+        
+        # Call the search callback
+        perform_search(query, {})
+    
+    # Show example queries (moved outside the form)
+    from frontend.config import EXAMPLE_QUERIES
+    with st.expander("Example questions", expanded=False):
+        example_cols = st.columns(2)
+        for i, example in enumerate(EXAMPLE_QUERIES):
+            with example_cols[i % 2]:
+                if st.button(
+                    example, 
+                    key=f"example_{i}",
+                    use_container_width=True,
+                    disabled=st.session_state.loading
+                ):
+                    # Set the example as the current query and trigger search
+                    st.session_state.current_query = example
+                    perform_search(example, {})
+
+# Close the card div
+st.markdown("""</div>""", unsafe_allow_html=True)
+
+# Display loading animation
+if st.session_state.loading:
+    st.markdown("""
+    <div class="loading-container">
+        <div class="tesla-coil">
+            <div class="spark"></div>
+        </div>
+        <div style="margin-left:20px;font-family:'Courier New',monospace;">
+            <p style="margin:0;font-size:1.2rem;color:#00b3e6;">REANIMATING DOCUMENTATION...</p>
+            <p style="margin:0;font-size:0.8rem;color:#ffcc00;font-style:italic;">The monster is thinking</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Display results or error
+st.markdown("""<div class="card">""", unsafe_allow_html=True)
 results_display(
     result=st.session_state.search_results,
     error=st.session_state.search_error
 )
+st.markdown("""</div>""", unsafe_allow_html=True)
+
+# Footer
+st.markdown("""
+<div class="footer">
+    <p>EXABOMINATION - Exabeam Documentation Search © 2025</p>
+    <p style="font-size:0.7rem;">Powered by Common Information Model</p>
+</div>
+""", unsafe_allow_html=True)
+
+# API connection status indicator
+status_text = {
+    "connected": "API Brain Connected - Power: 100%",
+    "disconnected": "API Brain Disconnected - Power: 0%",
+    "unknown": "API Brain Status Unknown"
+}
+
+st.markdown(f"""
+<div class="api-indicator-container">
+    <div class="api-indicator {st.session_state.api_status}"></div>
+    <div class="api-tooltip">{status_text[st.session_state.api_status]}</div>
+</div>
+""", unsafe_allow_html=True)
+
+# Check API status periodically (every 60 seconds)
+if st.session_state.get('last_api_check', 0) < time.time() - 60:
+    check_api_status()
+    st.session_state.last_api_check = time.time()

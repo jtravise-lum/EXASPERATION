@@ -1,161 +1,119 @@
-"""Results display component for the EXASPERATION frontend."""
+"""Component for displaying search results and error messages."""
 
 import streamlit as st
-from typing import Dict, List, Any, Optional
-from datetime import datetime
+from typing import Optional, Dict, Any, List
 
-from frontend.api.models import SearchResponse, SourceDocument, ErrorResponse, FeedbackResponse
+from frontend.api.models import SearchResponse, ErrorResponse, SourceDocument
+from frontend.config import SHOW_API_ERRORS, ENABLE_MOCK_FALLBACKS
 
-
-def results_display(result: Optional[SearchResponse] = None, error: Optional[ErrorResponse] = None):
-    """Render the search results component.
+def results_display(result: Optional[SearchResponse], error: Optional[ErrorResponse]) -> None:
+    """Display search results or error messages.
     
     Args:
-        result: Search result to display
-        error: Error response to display
+        result: Search response from API
+        error: Error response from API
     """
-    # Handle error state
-    if error is not None:
-        st.error(
-            f"Error: {error.error.get('message', 'Unknown error')}. "
-            f"Please try again or rephrase your query."
-        )
-        return
-    
-    # Handle empty result state
-    if result is None:
-        # First-time visit, show welcome message
-        if "current_query" not in st.session_state:
-            st.markdown(
-                """
-                ## Welcome to EXASPERATION
-                
-                Use the search box above to ask questions about Exabeam documentation.
-                
-                ### Examples:
-                - How does the password reset detection rule work?
-                - What events are monitored for lateral movement detection?
-                - How do I set up the AWS CloudTrail data source?
-                """
-            )
-        return
-    
-    # Display the answer with proper styling
-    st.markdown("### Answer")
-    st.markdown(result.answer)
-    
-    # Add feedback buttons
-    col1, col2, col3 = st.columns([1, 1, 5])
-    with col1:
-        if st.button("👍 Helpful", key="feedback_positive"):
-            _submit_feedback(result.request_id, "positive")
-            st.success("Thank you for your feedback!")
-    with col2:
-        if st.button("👎 Not Helpful", key="feedback_negative"):
-            _submit_feedback(result.request_id, "negative")
-            st.info("Thank you for your feedback! We'll try to improve.")
-    
-    # Add copy button
-    with col3:
-        if st.button("📋 Copy Answer", key="copy_answer"):
-            st.code(f"""
-{result.answer}
-
-Source: EXASPERATION - Exabeam Documentation Search Assistant
-""", language="")
-    
-    # Display sources header
-    if result.sources and len(result.sources) > 0:
-        st.markdown("### Sources")
-        _display_sources(result.sources)
-    
-    # Display suggested follow-up queries
-    if result.suggested_queries and len(result.suggested_queries) > 0:
-        st.markdown("### Follow-up Questions")
-        cols = st.columns(2)  # 2 columns for follow-up suggestions
+    if result is not None:
+        # Display the answer
+        st.markdown(f"### Answer")
+        st.markdown(result.answer)
         
-        for i, suggested_query in enumerate(result.suggested_queries):
-            with cols[i % 2]:
-                if st.button(
-                    suggested_query, 
-                    key=f"suggested_{i}",
-                    use_container_width=True
-                ):
-                    # Set as current query and trigger search
-                    st.session_state.current_query = suggested_query
-                    st.rerun()
-    
-    # Display metadata at the bottom
-    if st.button("Show Request Details", key="show_details"):
-        st.markdown("#### Request Details")
-        st.markdown(f"**Request ID:** {result.request_id}")
-        st.markdown(f"**Processing Time:** {result.metadata.processing_time_ms} ms")
-        st.markdown(f"**Total Matches:** {result.metadata.total_matches}")
-        st.markdown(f"**Relevance Threshold:** {result.metadata.threshold_applied}")
-
-
-def _display_sources(sources: List[SourceDocument]):
-    """Display source documents with formatting.
-    
-    Args:
-        sources: List of source documents to display
-    """
-    for i, source in enumerate(sources):
-        # Use a default title if none is provided
-        title = source.title if source.title else f"Document {source.id}"
-        st.markdown(f"#### Source {i+1}: {title}")
-        st.markdown(f"**Relevance Score:** {source.relevance_score:.2f}")
-        
-        # Format metadata
-        metadata_str = []
-        if source.metadata.document_type:
-            metadata_str.append(f"**Type:** {source.metadata.document_type}")
-        if source.metadata.vendor:
-            metadata_str.append(f"**Vendor:** {source.metadata.vendor}")
-        if source.metadata.product:
-            metadata_str.append(f"**Product:** {source.metadata.product}")
-        
-        st.markdown(" | ".join(metadata_str))
-        
-        # Display source URL as a clickable link
-        st.markdown(f"[View Source Document]({source.url})")
-        
-        # Display a collapsible section for content
-        # Instead of using a nested expander, use a button to toggle content
-        content_key = f"show_content_{i}"
-        
-        if st.button(f"Show Content for Source {i+1}" if content_key not in st.session_state or not st.session_state[content_key] else f"Hide Content for Source {i+1}", key=f"toggle_content_{i}"):
-            st.session_state[content_key] = not st.session_state.get(content_key, False)
-            
-        if content_key in st.session_state and st.session_state[content_key]:
-            # Format the content nicely
-            if source.content:
-                # Use markdown for better formatting
-                st.markdown("##### Content:")
-                st.markdown(source.content)
-            else:
-                st.info("No content available for this source.")
-        
-        if i < len(sources) - 1:  # Add separator except after last source
+        # Display document sources
+        if result.sources and len(result.sources) > 0:
             st.markdown("---")
-
-
-def _submit_feedback(request_id: str, rating: str):
-    """Submit feedback to the API.
+            st.markdown("### Sources")
+            
+            for i, source in enumerate(result.sources):
+                with st.expander(f"{source.title}", expanded=i == 0):
+                    # Use our custom source card styling
+                    st.markdown(f'''
+                    <div class="source-card">
+                        <div class="relevance-meter" style="width: {int(source.relevance_score * 100)}%;"></div>
+                        <div style="margin-bottom: 1rem;">
+                            <span class="metadata-tag">{source.metadata.document_type if source.metadata else 'Unknown'}</span>
+                            {f'<span class="metadata-tag">{source.metadata.vendor}</span>' if source.metadata and source.metadata.vendor else ''}
+                            {f'<span class="metadata-tag">{source.metadata.product}</span>' if source.metadata and source.metadata.product else ''}
+                        </div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+                    
+                    # Display the content with better formatting
+                    st.markdown(source.content)
+                    
+                    # Add relevance score and citation functionality
+                    cols = st.columns([3, 1])
+                    with cols[0]:
+                        st.caption(f"Relevance: {source.relevance_score:.2f}")
+                    with cols[1]:
+                        if st.button(f"Cite Source #{i+1}", key=f"cite_{source.id}", use_container_width=True):
+                            citation = f"{source.title} (ID: {source.chunk_id})"
+                            st.toast(f"Copied citation: {citation}")
+                        
+        # Show suggested queries
+        if result.suggested_queries and len(result.suggested_queries) > 0:
+            st.markdown("---")
+            st.markdown("### Try these related queries:")
+            cols = st.columns(min(3, len(result.suggested_queries)))
+            for i, query in enumerate(result.suggested_queries):
+                col_idx = i % len(cols)
+                with cols[col_idx]:
+                    if st.button(query, key=f"suggest_{i}"):
+                        st.session_state.current_query = query
+                        st.rerun()
+        
+        # If this was mock data, show a warning
+        if ENABLE_MOCK_FALLBACKS and result.sources and result.sources[0].metadata and result.sources[0].metadata.document_type == "mock":
+            st.warning("⚠️ This result contains mock data because the API is unavailable")
+            
+    elif error is not None:
+        # Display error in a more user-friendly way
+        st.error("Error Processing Query")
+        
+        # Show friendly error based on error code
+        if error.error.get("code") == "connection_error":
+            st.error("⚠️ Could not connect to the search API. Please try again later.")
+        elif error.error.get("code") == "authentication_error":
+            st.error("⚠️ Authentication error. Please check your API key.")
+        elif error.error.get("code") == "rate_limit_error":
+            st.error("⚠️ Rate limit exceeded. Please try again in a few minutes.")
+        elif error.error.get("code") == "internal_error":
+            st.error("⚠️ Internal server error. Our team has been notified.")
+        else:
+            st.error(f"⚠️ {error.error.get('message', 'An unknown error occurred')}")
+            
+        # Show detailed error information for developers/admins
+        if SHOW_API_ERRORS:
+            with st.expander("Technical Details"):
+                st.json({
+                    "error_code": error.error.get("code"),
+                    "error_message": error.error.get("message"),
+                    "request_id": error.request_id,
+                    "details": error.error.get("details", {})
+                })
+                st.info("If this error persists, please contact support with the request ID shown above.")
+        
+        # Show suggested recovery actions
+        st.markdown("### Suggestions:")
+        st.markdown("1. Try simplifying your query")
+        st.markdown("2. Check your network connection")
+        st.markdown("3. Verify that the API is running")
     
-    Args:
-        request_id: Request ID
-        rating: Feedback rating (positive/negative)
-    """
-    # Import at the top level of the file 
-    from frontend.utils.api_client import api_client
-    
-    try:
-        # Submit feedback to API
-        response = api_client.submit_feedback(request_id, rating)
-        if isinstance(response, ErrorResponse):
-            st.warning(f"Feedback submission error: {response.error.get('message', 'Unknown error')}")
-        elif isinstance(response, FeedbackResponse):
-            st.success(f"Feedback submitted: {response.message}")
-    except Exception as e:
-        st.warning(f"Could not submit feedback: {str(e)}")
+    # If no results and no error, show empty state
+    elif st.session_state.get("current_query"):
+        st.info("No results found. Please try a different query.")
+        
+        # Show some example queries to help the user
+        st.markdown("### Try these example queries:")
+        examples = [
+            "How does Exabeam detect lateral movement?",
+            "What is a data source?",
+            "How do I set up Active Directory monitoring?",
+            "Explain privilege escalation detection"
+        ]
+        cols = st.columns(2)
+        for i, example in enumerate(examples):
+            col_idx = i % 2
+            with cols[col_idx]:
+                if st.button(example, key=f"empty_suggest_{i}"):
+                    st.session_state.current_query = example
+                    st.rerun()

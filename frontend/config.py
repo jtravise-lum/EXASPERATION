@@ -34,11 +34,13 @@ DEFAULT_THRESHOLD = 0.7
 DEFAULT_INCLUDE_METADATA = True
 DEFAULT_RERANK = True
 
-# Example queries for the search interface
+# Example queries for the search interface - focused on CIM content
 EXAMPLE_QUERIES = [
-    "How does the password reset detection rule work?",
-    "What are the key features of the Active Directory integration?",
-    "How do I set up the AWS CloudTrail data source?",
-    "What events are monitored for lateral movement detection?",
-    "How does Exabeam detect privilege escalation?"
+    "What fields are available for the endpoint-login activity type?", 
+    "How is lateral movement detection implemented in the Exabeam Common Information Model?",
+    "What are the supported data sources for detecting privilege escalation?",
+    "Explain the structure of the Exabeam Common Information Model",
+    "What activity types are related to user authentication events?",
+    "How does Cisco ASA integration work with Exabeam?",
+    "What MITRE ATT&CK techniques are covered by the Exabeam Content Library?"
 ]
