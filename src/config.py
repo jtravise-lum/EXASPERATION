@@ -44,7 +44,7 @@ EMBEDDING_MODELS = {
     "code": "voyage-code-3"      # For structured data formats, parsers, and implementation details
 }
 DEFAULT_EMBEDDING_MODEL = "voyage-3-large"  # Default fallback
-LLM_MODEL = "claude-3-5-sonnet"
+LLM_MODEL = "claude-3-5-sonnet-20241022"
 LLM_TEMPERATURE = 0.2
 LLM_MAX_TOKENS = 4096
 
