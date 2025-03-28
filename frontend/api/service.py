@@ -83,12 +83,36 @@ class ExasperationService:
     def _initialize_query_engine(self):
         """Initialize the query engine and its dependencies."""
         from src.data_processing.vector_store import get_vector_store
+        from src.config import EMBEDDING_MODELS, DEFAULT_EMBEDDING_MODEL
         
-        # Get vector store
-        vector_store = get_vector_store()
+        # Initialize embedding provider with exact same models used during ingestion
+        # This is critical to ensure the embedding dimensions match (1024)
+        embedding_provider = MultiModalEmbeddingProvider(
+            model_config=EMBEDDING_MODELS,
+            default_model=DEFAULT_EMBEDDING_MODEL
+        )
+        logger.info(f"Initialized embedding provider with models: {EMBEDDING_MODELS}")
+        logger.info(f"Default model: {DEFAULT_EMBEDDING_MODEL}")
         
-        # Initialize embedding provider
-        embedding_provider = MultiModalEmbeddingProvider()
+        # Get vector store using our properly configured embedding provider
+        try:
+            # First try using get_vector_store(), which creates its own embedding provider
+            vector_store = get_vector_store()
+            logger.info("Using default vector store configuration")
+        except Exception as e:
+            logger.warning(f"Error using default vector store: {str(e)}")
+            logger.info("Creating custom vector store with our embedding provider")
+            
+            # Create a new vector store with our embedding provider
+            from src.data_processing.vector_store import VectorDatabase
+            from src.config import CHROMA_DB_PATH
+            
+            vector_store = VectorDatabase(
+                embedding_provider=embedding_provider,
+                db_path=CHROMA_DB_PATH,
+                collection_name="exabeam_docs",
+                use_server=False  # Use local mode to access the database directly
+            )
         
         # Initialize query processor
         query_processor = QueryProcessor(embedding_provider=embedding_provider)
