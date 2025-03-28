@@ -3,7 +3,7 @@
 
 # Navigate to the project root (works regardless of where script is called from)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR"
 cd "${PROJECT_ROOT}" || exit 1
 
 # Set colors for output

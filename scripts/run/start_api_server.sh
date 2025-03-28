@@ -1,12 +1,17 @@
 #!/bin/bash
 # Script to start the EXASPERATION API server in the background
 
+# Navigate to the project root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+cd "${PROJECT_ROOT}" || exit 1
+
 # Configuration
 API_HOST="0.0.0.0"  # Listen on all interfaces
 API_PORT=8888       # Default port from config
-API_LOG_DIR="logs"  # Directory for logs
+API_LOG_DIR="${PROJECT_ROOT}/logs"  # Directory for logs
 API_LOG_FILE="api_server.log"
-PID_FILE="api_server.pid"
+PID_FILE="${PROJECT_ROOT}/scripts/run/api_server.pid"
 
 # Ensure log directory exists
 mkdir -p "$API_LOG_DIR"
@@ -16,7 +21,7 @@ if [ -f "$PID_FILE" ]; then
     PID=$(cat "$PID_FILE")
     if ps -p "$PID" > /dev/null; then
         echo "API server is already running with PID $PID"
-        echo "To stop the server, run: ./stop_api_server.sh"
+        echo "To stop the server, run: ${SCRIPT_DIR}/stop_api_server.sh"
         exit 1
     else
         echo "Removing stale PID file"
@@ -25,14 +30,14 @@ if [ -f "$PID_FILE" ]; then
 fi
 
 # Check if API virtual environment exists, create if not
-if [ ! -d "api_venv" ]; then
+if [ ! -d "${PROJECT_ROOT}/api_venv" ]; then
     echo "Creating API virtual environment..."
-    python3 -m venv api_venv
-    source api_venv/bin/activate
-    pip install -r frontend.requirements.txt
+    python3 -m venv "${PROJECT_ROOT}/api_venv"
+    source "${PROJECT_ROOT}/api_venv/bin/activate"
+    pip install -r "${PROJECT_ROOT}/frontend.requirements.txt"
 else
     # Activate the API virtual environment
-    source api_venv/bin/activate
+    source "${PROJECT_ROOT}/api_venv/bin/activate"
 fi
 
 # Start the API server in the background
@@ -48,7 +53,7 @@ nohup python -m frontend.api.main --host "$API_HOST" --port "$API_PORT" > "$API_
 # Save the PID
 echo $! > "$PID_FILE"
 echo "API server started with PID $(cat "$PID_FILE")"
-echo "To stop the server, run: ./stop_api_server.sh"
+echo "To stop the server, run: ${SCRIPT_DIR}/stop_api_server.sh"
 
 # Display the URL for accessing the API
 echo ""

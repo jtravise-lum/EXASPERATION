@@ -1,7 +1,12 @@
 #!/bin/bash
 # Script to stop the EXASPERATION API server
 
-PID_FILE="api_server.pid"
+# Navigate to the project root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+cd "${PROJECT_ROOT}" || exit 1
+
+PID_FILE="${PROJECT_ROOT}/scripts/run/api_server.pid"
 
 # Check if PID file exists
 if [ ! -f "$PID_FILE" ]; then

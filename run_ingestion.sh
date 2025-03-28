@@ -82,13 +82,8 @@ if [ ! -d "$CONTENT_DIR" ]; then
 fi
 
 # Activate the virtual environment
-if [ -d "api_venv" ]; then
-    source api_venv/bin/activate
-elif [ -d "frontend_venv" ]; then
-    source frontend_venv/bin/activate
-else
-    echo "Warning: No virtual environment found. Using system Python."
-fi
+    echo "Using chromadb_venv"
+    source chromadb_venv/bin/activate
 
 # Prepare command arguments
 CMD_ARGS="--content-dir $CONTENT_DIR --batch-size $BATCH_SIZE"

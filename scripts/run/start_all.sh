@@ -3,7 +3,7 @@
 
 # Navigate to the project root (works regardless of where script is called from)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR"
 cd "${PROJECT_ROOT}" || exit 1
 
 # Set colors for output
@@ -52,4 +52,4 @@ echo -e "${YELLOW}API is running at: http://localhost:8888${NC}"
 echo -e "${YELLOW}Frontend is running at: http://localhost:8501${NC}"
 echo -e "${YELLOW}Application is accessible at: https://exp.travise.net${NC}"
 
-echo -e "${YELLOW}To stop all services, run: ${GREEN}${PROJECT_ROOT}/scripts/run/stop_all.sh${NC}"
+echo -e "${YELLOW}To stop all services, run: ${GREEN}${PROJECT_ROOT}/stop_all.sh${NC}"
