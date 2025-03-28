@@ -1,0 +1,41 @@
+# Virtual environments
+*_venv/
+api_venv/
+frontend_venv/
+chromadb_venv/
+
+# Data directories
+data/
+caddy-docker/
+
+# Git
+.git/
+.gitignore
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Log files
+logs/
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.example

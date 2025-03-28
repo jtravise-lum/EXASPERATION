@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "2222:2222"
+    volumes:
+      - ./caddy/config/Caddyfile:/etc/caddy/Caddyfile
+      - ./caddy/certs:/certs:ro  # ADDED this volume mount
+      - ./caddy/data:/data
+    networks:
+      - caddy_network
+
+networks:
+  caddy_network:
+    driver: bridge

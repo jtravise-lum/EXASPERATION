@@ -1,0 +1,52 @@
+lumifi.travise.net:2222 {
+    # CHANGED: Use our Let's Encrypt certificates instead of internal
+    tls /certs/fullchain.pem /certs/privkey.pem
+    
+    # No change: Using host.docker.internal to access host services
+    reverse_proxy host.docker.internal:9090 {
+        transport http {
+            tls_insecure_skip_verify
+        }
+    }
+}
+exp.travise.net {
+    # Reverse proxy for the frontend (Streamlit)
+    # Combined handler for all Streamlit paths
+    handle {
+        reverse_proxy host.docker.internal:8501 {
+            header_up Host {upstream_hostport}
+            # Strip path prefix if present
+            header_up X-Forwarded-Host {host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Reverse proxy for the API
+    handle /v1/* {
+        reverse_proxy host.docker.internal:8888
+    }
+
+    # Use existing certificates
+    tls /certs/exp.fullchain.pem /certs/exp.privkey.pem
+
+    # Enable compression
+    encode gzip zstd
+
+    # Add security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        X-XSS-Protection "1; mode=block"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; media-src 'self'; frame-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self';"
+    }
+
+    # Configure logging
+    log {
+        output file ./logs/caddy/access.log {
+            roll_size 10MB
+            roll_keep 10
+        }
+    }
+}
