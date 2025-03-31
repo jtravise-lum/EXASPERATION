@@ -1,15 +1,18 @@
-# EXASPERATION Deployment Guide
+# EXABOMINATION Deployment Guide
 
-This document provides instructions for deploying the EXASPERATION system with Docker and Caddy.
+## Overview
 
-## System Architecture
+This document provides instructions for deploying the EXABOMINATION system, which consists of three main components: ChromaDB (vector database), API Backend (FastAPI service), and Frontend (Streamlit interface). It also uses a Caddy reverse proxy to handle HTTPS access. All components are containerized using Docker for easier deployment and management.
 
-EXASPERATION consists of three main components:
+## Docker Deployment
 
-1. **ChromaDB** - Vector database running on port 8000 (container only)
-2. **API Backend** - FastAPI service running on port 8888 (exposed to host)
-3. **Frontend** - Streamlit interface running on port 8501 (exposed to host)
-4. **Caddy** - Reverse proxy providing HTTPS access (running on host)
+### System Architecture
+
+EXABOMINATION consists of three main components:
+
+1.  **ChromaDB** - Vector database running on port 8000 (container only)
+2.  **API Backend** - FastAPI service running on port 8888 (exposed to host)
+3.  **Frontend** - Streamlit interface running on port 8501 (exposed to host)
 
 ## Prerequisites
 
@@ -17,7 +20,9 @@ EXASPERATION consists of three main components:
 - Caddy web server (either as systemd service or standalone)
 - SSL certificates for your domain
 
-## Configuration Files
+### Configuration Files
+
+The system uses two main configuration files, `docker-compose.yml` and `Caddyfile`.
 
 ### Docker Compose
 
@@ -38,7 +43,11 @@ The `Caddyfile` configures the reverse proxy to:
 - Apply HTTPS with your SSL certificates
 - Add security headers and compression
 
-## Quick Start
+### Quick Start
+
+To start the entire EXABOMINATION stack including the frontend:
+
+
 
 1. **Start all services**:
    ```bash
