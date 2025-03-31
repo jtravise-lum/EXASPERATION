@@ -1,11 +1,14 @@
 import os
 import sys
 import chromadb
-
+from dotenv import load_dotenv
+load_dotenv()
+CHROMA_SERVER_HOST = os.getenv("CHROMA_SERVER_HOST", "localhost")
+CHROMA_SERVER_PORT = int(os.getenv("CHROMA_SERVER_PORT", "8000"))
 def main():
     try:
         print("Connecting to ChromaDB server...")
-        client = chromadb.HttpClient(host="localhost", port=8000)
+        client = chromadb.HttpClient(host=CHROMA_SERVER_HOST, port=CHROMA_SERVER_PORT)
         
         print("\nGetting collections:")
         collections = client.list_collections()

@@ -1,7 +1,18 @@
 import chromadb
+from dotenv import load_dotenv
+import os
+from pathlib import Path
 
+load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
+
+CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", str(DATA_DIR / "chromadb"))
+CHROMA_SERVER_HOST = os.getenv("CHROMA_SERVER_HOST", "localhost")
+CHROMA_SERVER_PORT = int(os.getenv("CHROMA_SERVER_PORT", "8000"))
 def main():
-    client = chromadb.HttpClient(host="localhost", port=8000)
+    client = chromadb.HttpClient(host=CHROMA_SERVER_HOST, port=CHROMA_SERVER_PORT)
+    
     
     print("Checking all collections in ChromaDB...")
     collections = client.list_collections()
