@@ -3,7 +3,7 @@
 import streamlit as st
 from typing import Callable, Dict, Any, List, Optional
 from datetime import datetime
-
+from frontend.config import COLORS, TEXT
 from frontend.api.models import SearchFilters, MetadataOptionsResponse
 
 def filters_panel(on_change: Callable[[SearchFilters], None], metadata_options: MetadataOptionsResponse) -> SearchFilters:
@@ -16,8 +16,20 @@ def filters_panel(on_change: Callable[[SearchFilters], None], metadata_options: 
     Returns:
         Current filter settings
     """
-    with st.sidebar:
-        st.markdown("### Search Filters")
+    with st.sidebar:        
+        st.markdown(f"""
+        <style>
+        .filter-component {{
+            padding: 1rem;
+            border-radius: 8px;
+            background-color: {COLORS["secondary"]};
+            margin-bottom: 0.5rem;
+            color: {COLORS["text"]};
+            font-family: {TEXT["family"]};
+        }}
+        </style>
+        """, unsafe_allow_html=True)
+        st.markdown(f"<h3 style='color: {COLORS['text']}; font-family: {TEXT['family']}'>Search Filters</h3>", unsafe_allow_html=True)
         
         # Initialize filters if not in session state
         if "filters" not in st.session_state:
@@ -31,7 +43,7 @@ def filters_panel(on_change: Callable[[SearchFilters], None], metadata_options: 
             }
         
         # Create filter sections
-        with st.expander("Document Types", expanded=False):
+        with st.expander("Document Types", expanded=False) as expander:
             if metadata_options and metadata_options.document_types:
                 st.session_state.filters["document_types"] = st.multiselect(
                     "Select document types:",
@@ -40,9 +52,11 @@ def filters_panel(on_change: Callable[[SearchFilters], None], metadata_options: 
                 )
             else:
                 st.info("No document types available")
+            st.markdown(f"<div class='filter-component'></div>", unsafe_allow_html=True)
+            
         
-        with st.expander("Vendors & Products", expanded=False):
-            if metadata_options and metadata_options.vendors:
+        with st.expander("Vendors & Products", expanded=False) as expander:
+            if metadata_options and metadata_options.vendors and metadata_options.products:
                 # First select vendors
                 selected_vendors = st.multiselect(
                     "Select vendors:",
@@ -51,7 +65,7 @@ def filters_panel(on_change: Callable[[SearchFilters], None], metadata_options: 
                 )
                 st.session_state.filters["vendors"] = selected_vendors
                 
-                # Then show products for selected vendors
+                #Then show products for selected vendors
                 if selected_vendors and metadata_options.products:
                     all_products = []
                     for vendor in selected_vendors:
@@ -65,9 +79,10 @@ def filters_panel(on_change: Callable[[SearchFilters], None], metadata_options: 
                     )
             else:
                 st.info("No vendor data available")
+            st.markdown(f"<div class='filter-component'></div>", unsafe_allow_html=True)
         
-        with st.expander("Use Cases", expanded=False):
-            if metadata_options and metadata_options.use_cases:
+        with st.expander("Use Cases", expanded=False) as expander:
+            if metadata_options and metadata_options.use_cases :
                 st.session_state.filters["use_cases"] = st.multiselect(
                     "Select use cases:",
                     options=metadata_options.use_cases,
@@ -75,9 +90,10 @@ def filters_panel(on_change: Callable[[SearchFilters], None], metadata_options: 
                 )
             else:
                 st.info("No use case data available")
+            st.markdown(f"<div class='filter-component'></div>", unsafe_allow_html=True)
         
-        with st.expander("Date Range", expanded=False):
-            if metadata_options and metadata_options.date_range:
+        with st.expander("Date Range", expanded=False) as expander:
+            if metadata_options and metadata_options.date_range :
                 # Parse dates from strings
                 try:
                     oldest = datetime.fromisoformat(metadata_options.date_range["oldest"].split("T")[0])
@@ -103,10 +119,12 @@ def filters_panel(on_change: Callable[[SearchFilters], None], metadata_options: 
                     st.error("Invalid date range format")
             else:
                 st.info("No date range data available")
+            st.markdown(f"<div class='filter-component'></div>", unsafe_allow_html=True)
         
         # Add a button to apply filters
-        if st.button("Apply Filters", use_container_width=True):
-            # Convert to SearchFilters object
+        button_style = f"background-color: {COLORS['accent']}; color: {COLORS['primary']}; border-radius: 8px; font-family: {TEXT['family']}"
+        if st.button("Apply Filters", use_container_width=True, key='apply-button',  help='Apply the selected filters', type='primary'):
+            #Convert to SearchFilters object
             filters = SearchFilters(
                 document_types=st.session_state.filters["document_types"] if st.session_state.filters["document_types"] else None,
                 vendors=st.session_state.filters["vendors"] if st.session_state.filters["vendors"] else None,
@@ -118,7 +136,7 @@ def filters_panel(on_change: Callable[[SearchFilters], None], metadata_options: 
             on_change(filters)
         
         # Add a button to reset filters
-        if st.button("Reset Filters", use_container_width=True):
+        if st.button("Reset Filters", use_container_width=True, key='reset-button', help='Reset all filters', type='secondary'):
             st.session_state.filters = {
                 "document_types": [],
                 "vendors": [],

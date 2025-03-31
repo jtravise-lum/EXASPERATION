@@ -1,7 +1,8 @@
 """Notifications component for the EXASPERATION frontend."""
 
 import streamlit as st
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Literal
+from frontend.config import COLORS, TEXT
 import uuid
 
 
@@ -127,10 +128,11 @@ class NotificationSystem:
             n for n in st.session_state.notifications
             if n["duration"] is None or 
                (st.session_state._current_time - n["created_at"]) // 10 < n["duration"]
-        ]
+            ]
         
         # Render each notification
         for notification in st.session_state.notifications:
+            st.markdown(f"<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
             self._render_notification(notification)
     
     def _render_notification(self, notification: Dict[str, Any]) -> None:
@@ -140,20 +142,24 @@ class NotificationSystem:
             notification: Notification data
         """
         notification_type = notification["type"]
+        notification_type_label: Literal["success", "error", "info", "warning", "loading"] = notification["type"]
         message = notification["message"]
         
-        if notification_type == "success":
-            st.success(message)
-        elif notification_type == "error":
-            st.error(message)
-        elif notification_type == "info":
-            st.info(message)
+        
+        if notification_type_label in ["success", "error"]:
+            color = COLORS[notification_type_label]
+            
+            st.markdown(
+                f"<div style='background-color: {color}; color: {COLORS['text']}; padding: 10px; border-radius: 5px; font-family: {TEXT['family']};'>{message}</div>",
+                unsafe_allow_html=True
+            )
+        elif notification_type_label == "info":
+            st.info(message)    
         elif notification_type == "warning":
             st.warning(message)
         elif notification_type == "loading":
             with st.spinner(message):
                 pass
-
 
 # Create a singleton instance
 notifications = NotificationSystem()

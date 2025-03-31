@@ -5,6 +5,7 @@ from typing import Callable, Dict, Any, List, Optional
 import time
 
 from frontend.config import EXAMPLE_QUERIES
+from frontend.config import COLORS, TEXT
 
 def search_interface(on_search: Callable[[str, Dict[str, Any]], None], loading: bool = False) -> str:
     """Display the search interface with query input and submit button.
@@ -16,8 +17,26 @@ def search_interface(on_search: Callable[[str, Dict[str, Any]], None], loading: 
     Returns:
         The current query
     """
-    st.title("EXABOMINATION")
-    st.subheader("Exabeam Common Information Model Documentation Search")
+
+    st.markdown(
+        f"""
+        <h1 style='text-align: left; font-size: 36px; color: {COLORS["text"]}; font-family: {TEXT["family"]}; font-weight: {TEXT["headings_weight"]};'>
+            EXABOMINATION
+        </h1>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        f"""
+        <p style='text-align: left; font-size: 18px; color: {COLORS["text"]}; font-family: {TEXT["family"]};'>
+            Exabeam Common Information Model Documentation Search
+        </p>
+        """,
+        unsafe_allow_html=True
+    )
+
+
     
     # Create form for search input
     with st.form(key="search_form"):
@@ -28,7 +47,17 @@ def search_interface(on_search: Callable[[str, Dict[str, Any]], None], loading: 
             height=100,
             max_chars=1000,
             placeholder="e.g., How does the password reset detection rule work?"
+            
         )
+
+        # Apply custom styling to the text input
+        st.markdown(
+            f"""
+            <style>
+            div[data-testid="stTextArea"] textarea {{ border-radius: 8px; }}
+            </style>
+            """,
+            unsafe_allow_html=True)
         
         # Submit button
         col1, col2 = st.columns([4, 1])
@@ -39,6 +68,15 @@ def search_interface(on_search: Callable[[str, Dict[str, Any]], None], loading: 
                 use_container_width=True,
                 disabled=loading
             )
+        # Apply custom styling to the button
+        st.markdown(
+            f"""
+            <style>
+            div[data-testid="stForm"] button {{ border-radius: 8px; }}
+            </style>
+            """,
+            unsafe_allow_html=True)
+
     
     # Display loading indicator
     if loading:

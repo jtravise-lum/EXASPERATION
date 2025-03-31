@@ -17,7 +17,8 @@ from frontend.api.models import SearchFilters, SearchOptions, ErrorResponse
 from frontend.config import (
     DEFAULT_MAX_RESULTS,
     DEFAULT_THRESHOLD,
-    DEFAULT_INCLUDE_METADATA,
+    COLORS,
+    TEXT,    DEFAULT_INCLUDE_METADATA,
     DEFAULT_RERANK
 )
 
@@ -34,14 +35,12 @@ st.markdown("""
 <style>
     /* Main color scheme */
     :root {
-        --primary-color: #0f4880;
-        --secondary-color: #00b3e6;
-        --accent-color: #ffcc00; 
-        --dark-bg: #121621;
-        --text-color: #ffffff;
-        --panel-bg: #1e2639;
+        --primary-color: {COLORS["primary"]};
+        --secondary-color: {COLORS["secondary"]};
+        --accent-color: {COLORS["accent"]};
+        --text-color: {COLORS["text"]};
+        --panel-bg: {COLORS["secondary"]};
     }
-    
     /* Base styling */
     .main {
         background-color: var(--dark-bg);
@@ -68,13 +67,17 @@ st.markdown("""
         margin: 0;
         font-weight: 700;
         color: var(--accent-color);
-        font-family: 'Impact', sans-serif;
+        font-family: {TEXT["family"]};
         letter-spacing: 2px;
         text-shadow: 0 0 10px rgba(255, 204, 0, 0.7);
     }
     
     .main-header p {
         margin: 0.5rem 0 0 0;
+        font-family: {TEXT["family"]};
+        font-size: {TEXT["body_size"]}px;
+        font-weight: {TEXT["body_weight"]};
+        color: var(--text-color);
         opacity: 0.9;
         font-size: 1.1rem;
         font-style: italic;
@@ -89,6 +92,9 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0, 179, 230, 0.3);
         margin-bottom: 1.5rem;
         transition: all 0.3s ease;
+        font-family: {TEXT["family"]};
+        font-size: {TEXT["body_size"]}px;
+        font-weight: {TEXT["body_weight"]};
     }
     
     .card:hover {
@@ -121,6 +127,7 @@ st.markdown("""
         font-size: 0.8rem;
         margin-right: 0.5rem;
         margin-bottom: 0.5rem;
+        font-family: {TEXT["family"]};
     }
     
     .source-card .relevance-meter {
@@ -140,7 +147,7 @@ st.markdown("""
         border: 1px solid var(--secondary-color);
         padding: 0.5rem 1rem;
         transition: all 0.3s ease;
-        font-family: 'Courier New', monospace;
+        font-family: {TEXT["family"]};
     }
     
     .stButton button:hover {
@@ -157,7 +164,7 @@ st.markdown("""
         border: 1px solid var(--secondary-color) !important;
         padding: 0.75rem 1rem;
         box-shadow: 0 0 10px rgba(0, 179, 230, 0.3);
-        font-family: 'Courier New', monospace;
+        font-family: {TEXT["family"]};
     }
     
     /* Sources styling */
@@ -165,6 +172,8 @@ st.markdown("""
         background-color: rgba(15, 72, 128, 0.5);
         padding: 0.75rem 1rem;
         border-radius: 5px;
+        font-family: {TEXT["family"]};
+        font-size: {TEXT["small_size"]}px;
         margin-bottom: 0.5rem;
         border-left: 4px solid var(--secondary-color);
     }
@@ -200,6 +209,11 @@ st.markdown("""
         margin: 2rem 0;
         height: 60px;
     }
+
+    body {
+        padding: 16px;
+    }
+    
     
     .tesla-coil {
         width: 50px;
@@ -262,6 +276,8 @@ st.markdown("""
         margin-top: 3rem;
         padding-top: 1rem;
         border-top: 1px solid var(--secondary-color);
+        font-family: {TEXT["family"]};
+        font-size: {TEXT["small_size"]}px;
         color: rgba(255, 255, 255, 0.6);
         font-size: 0.8rem;
     }
@@ -334,6 +350,7 @@ st.markdown("""
         opacity: 1;
     }
 </style>
+
 
 <div class="lightning" id="lightning"></div>
 

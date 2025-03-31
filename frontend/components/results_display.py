@@ -4,7 +4,7 @@ import streamlit as st
 from typing import Optional, Dict, Any, List
 
 from frontend.api.models import SearchResponse, ErrorResponse, SourceDocument
-from frontend.config import SHOW_API_ERRORS, ENABLE_MOCK_FALLBACKS
+from frontend.config import SHOW_API_ERRORS, ENABLE_MOCK_FALLBACKS, COLORS
 
 def results_display(result: Optional[SearchResponse], error: Optional[ErrorResponse]) -> None:
     """Display search results or error messages.
@@ -24,11 +24,11 @@ def results_display(result: Optional[SearchResponse], error: Optional[ErrorRespo
             st.markdown("### Sources")
             
             for i, source in enumerate(result.sources):
-                with st.expander(f"{source.title}", expanded=i == 0):
+                with st.expander(f"{source.title}", expanded=False):
                     # Use our custom source card styling
                     st.markdown(f'''
-                    <div class="source-card">
-                        <div class="relevance-meter" style="width: {int(source.relevance_score * 100)}%;"></div>
+                    <div class="source-card" style="margin-bottom: 1.5rem;">
+                        <div class="relevance-meter" style="width: {int(source.relevance_score * 100)}%; background-color: {COLORS['accent']};"></div>
                         <div style="margin-bottom: 1rem;">
                             <span class="metadata-tag">{source.metadata.document_type if source.metadata else 'Unknown'}</span>
                             {f'<span class="metadata-tag">{source.metadata.vendor}</span>' if source.metadata and source.metadata.vendor else ''}

@@ -21,12 +21,29 @@ ENABLE_SUGGESTIONS = os.getenv("ENABLE_SUGGESTIONS", "true").lower() == "true"
 ENABLE_MOCK_FALLBACKS = os.getenv("ENABLE_MOCK_FALLBACKS", "false").lower() == "true"
 SHOW_API_ERRORS = os.getenv("SHOW_API_ERRORS", "true").lower() == "true"
 
-# Styling
-THEME_PRIMARY_COLOR = os.getenv("STREAMLIT_THEME_PRIMARY_COLOR", "#0066CC")
-THEME_SECONDARY_COLOR = "#00A3E0"
-THEME_ACCENT_COLOR = "#FF6B00"
-THEME_BACKGROUND_COLOR = "#F5F7FA"
-THEME_TEXT_COLOR = "#333333"
+# Color Scheme
+COLORS = {
+    "primary": "#1E2639",  # Deep dark blue
+    "secondary": "#29344F",  # Lighter dark blue
+    "accent": "#00B3E6",  # Vibrant cyan
+    "text": "#E0E0E0",  # Very light gray
+    "error": "#FF4136",
+    "success": "#2ECC40",
+}
+
+# Typography
+TEXT = {
+    "family": "Roboto",
+    "headings_weight": "bold",
+    "body_weight": "regular",
+    "headings_size": {
+        "h1": "24px",
+        "h2": "20px",
+        "h3": "18px",
+    },
+    "body_size": "16px",
+    "small_size": "14px",
+}
 
 # Default Parameters
 DEFAULT_MAX_RESULTS = 10

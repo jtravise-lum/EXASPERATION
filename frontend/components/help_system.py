@@ -1,12 +1,16 @@
 """Help system component for the EXASPERATION frontend."""
 
 import streamlit as st
-from typing import Dict, List, Any, Optional
+from frontend.config import COLORS, TEXT
 
 
 def help_system():
     """Render the help system in the sidebar."""
-    with st.sidebar.expander("Help & Documentation", expanded=False):
+    st.markdown(f"""
+        <style>
+            .help-container {{background-color: {COLORS["secondary"]}; border-radius: 8px; padding: 1rem;}}
+        </style>""", unsafe_allow_html=True)
+    with st.sidebar.expander("Help & Documentation", expanded=False) as help_container:
         st.markdown("""
         ## How to Use EXASPERATION
         
@@ -41,7 +45,7 @@ def help_system():
         - **Ctrl+Enter** - Submit search
         - **Esc** - Clear search input
         - **?** - Show this help
-        """)
+        """, unsafe_allow_html=True)
 
 
 def show_tooltip(text: str, tooltip: str, icon: str = "ℹ️"):
@@ -110,7 +114,7 @@ def guided_tour():
         
         with st.container():
             st.markdown(f"## {step['title']}")
-            st.markdown(step['content'])
+            st.markdown(step['content'], unsafe_allow_html=True)
             
             col1, col2, col3 = st.columns([1, 1, 5])
             with col1:
@@ -133,7 +137,7 @@ def guided_tour():
 
 def faq_section():
     """Show frequently asked questions."""
-    with st.expander("Frequently Asked Questions", expanded=False):
+    with st.expander("Frequently Asked Questions", expanded=False) as faq_container:
         st.markdown("""
         ### Frequently Asked Questions
         
@@ -169,7 +173,7 @@ def faq_section():
         - Focus on work-related queries about Exabeam documentation
         - Avoid submitting the same query multiple times in succession
         - Use the search history feature to revisit previous queries
-        """)
+        """, unsafe_allow_html=True)
 
 
 # Create help content that can be inserted into the app

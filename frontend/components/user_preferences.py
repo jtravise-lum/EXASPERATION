@@ -2,7 +2,7 @@
 
 import streamlit as st
 from typing import Dict, Any, Optional
-
+from frontend.config import COLORS, TEXT
 
 def user_preferences():
     """Render user preferences panel in the sidebar."""
@@ -21,7 +21,14 @@ def user_preferences():
             }
         }
     
-    with st.sidebar.expander("Settings", expanded=False):
+    with st.sidebar.expander("Settings", expanded=False) as settings_expander:
+        st.markdown(
+            f"""
+            <style>
+            div[data-testid="stExpander"] div[role="button"] p {{font-size: {TEXT['body_size']}px;}}
+            </style>
+            """, unsafe_allow_html=True
+        )
         # Theme selection
         theme = st.radio(
             "Theme", 
@@ -83,6 +90,20 @@ def user_preferences():
                 }
             }
             st.rerun()
+    
+    if settings_expander:
+        st.markdown(
+            f"""
+            <style>
+            div[data-testid="stExpander"][expanded="false"] div[data-testid="stVerticalBlock"] {{
+                padding: 1rem;
+                border-radius: 8px;
+                background-color: {COLORS['secondary']};
+                font-family: {TEXT['family']};
+            }}
+            </style>
+            """, unsafe_allow_html=True
+        )
     
     return st.session_state.preferences
 
