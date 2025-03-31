@@ -5,25 +5,25 @@ from typing import Dict, Any
 import time
 
 # Import components
-from frontend.components.search_interface import search_interface, query_history_sidebar
+from frontend.components.search_interface import query_history_sidebar, search_interface
 from frontend.components.results_display import results_display
-from frontend.components.filters_panel import filters_panel
-
+from frontend.components.help_system import help_system, handle_help_toggle
+from frontend.components.user_preferences import user_preferences
 # Import API client
 from frontend.utils.api_client import api_client
-from frontend.api.models import SearchFilters, SearchOptions, ErrorResponse
-
-# Import configuration
+from frontend.api.models import SearchFilters, SearchOptions, ErrorResponse, SearchRequest, SearchResponse
 from frontend.config import (
     DEFAULT_MAX_RESULTS,
+    DEFAULT_INCLUDE_METADATA,
     DEFAULT_THRESHOLD,
     COLORS,
-    TEXT,    DEFAULT_INCLUDE_METADATA,
+    TEXT,
+
     DEFAULT_RERANK
 )
 
 # Set page config
-st.set_page_config(
+st.set_page_config(    
     page_title="EXABOMINATION - Exabeam CIM Documentation Search",
     page_icon="⚡",
     layout="wide",
@@ -33,23 +33,24 @@ st.set_page_config(
 # Apply custom CSS
 st.markdown("""
 <style>
-    /* Main color scheme */
+    /* Main Colors */
     :root {
         --primary-color: {COLORS["primary"]};
         --secondary-color: {COLORS["secondary"]};
         --accent-color: {COLORS["accent"]};
         --text-color: {COLORS["text"]};
         --panel-bg: {COLORS["secondary"]};
-    }
-    /* Base styling */
-    .main {
-        background-color: var(--dark-bg);
+     }
+    /* Base styling */    
+    body {
+        background-color: var(--primary-color);
         color: var(--text-color);
-        font-family: 'Courier New', monospace;
-    }
+        font-family: {TEXT["family"]};
+        padding: 16px;
+     }
     
     .sidebar .sidebar-content {
-        background-color: var(--panel-bg);
+        background-color: var(--panel-bg);        
     }
     
     /* Header styling */
@@ -209,7 +210,7 @@ st.markdown("""
         margin: 2rem 0;
         height: 60px;
     }
-
+    
     body {
         padding: 16px;
     }
@@ -279,12 +280,6 @@ st.markdown("""
         font-family: {TEXT["family"]};
         font-size: {TEXT["small_size"]}px;
         color: rgba(255, 255, 255, 0.6);
-        font-size: 0.8rem;
-    }
-    
-    /* API Connection indicator */
-    .api-indicator {
-        position: fixed;
         bottom: 15px;
         right: 15px;
         width: 15px;
@@ -386,6 +381,7 @@ def init_session_state():
     if "api_status" not in st.session_state:
         st.session_state.api_status = "unknown"  # "connected", "disconnected", or "unknown"
 
+
 # Initialize session state
 init_session_state()
 
@@ -479,24 +475,12 @@ def perform_search(query: str, filters: Dict[str, Any]):
         debug_container.empty()
 
 # Function to handle filter changes
-def handle_filter_change(filters: SearchFilters):
-    """Handle filter changes and re-run search if needed."""
-    # Only re-run search if we have a current query
-    if st.session_state.current_query:
-        perform_search(st.session_state.current_query, filters.model_dump())
-
-# Import additional models needed
-from frontend.api.models import (
-    MetadataOptionsResponse, 
     ErrorResponse,
-    SearchResponse,
-    SearchFilters,
-    SearchOptions,
-    SearchRequest
+    SearchResponse
 )
 
 # Logo in sidebar
-with st.sidebar:
+with st.sidebar:    
     # Display logo with styled text
     st.markdown("""
     <div class="logo-placeholder">
@@ -506,34 +490,10 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     # Use dev_mode for simulation only, but don't show the checkbox
-    dev_mode = True
-
-# Display the query history in the sidebar
-query_history_sidebar()
-
-# Get metadata options for filters
-try:
-    # Get or create metadata options (with mock fallback)
-    if st.session_state.metadata_options is None:
-        # If in dev mode and API is not available, use mock data
-        if dev_mode:
-            st.session_state.metadata_options = MetadataOptionsResponse(
-                document_types=["use_case", "parser", "rule", "data_source", "overview", "tutorial"],
-                vendors=["microsoft", "cisco", "okta", "palo_alto", "aws"],
-                products={
-                    "microsoft": ["active_directory", "azure_ad", "exchange_online", "windows"],
-                    "cisco": ["asa", "firepower", "ise", "meraki"],
-                    "okta": ["identity_cloud"]
-                },
-                use_cases=["account_takeover", "data_exfiltration", "lateral_movement", "privilege_escalation"],
-                date_range={"oldest": "2022-01-15", "newest": "2025-03-27"}
-            )
     
-    # Use available metadata options 
-    filters = filters_panel(handle_filter_change, st.session_state.metadata_options)
-except Exception as e:
-    st.sidebar.error(f"Could not load filters: {str(e)}")
-
+# Display the query history in the sidebar    
+query_history_sidebar()
+    user_preferences()
 # Main app layout
 st.write("")
 
@@ -546,72 +506,15 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Skip rendering the normal search interface header and render the component in a card
-# This is the key change - we're customizing how we render the search_interface component
+# Add search interface
 st.markdown("""<div class="card">""", unsafe_allow_html=True)
+search_interface(perform_search)
 
-# Create container to hold search interface
-search_container = st.container()
-with search_container:
-    # Instead of calling search_interface directly, we'll call it with a custom wrapper
-    # that skips rendering the title that contains "EXASPERATION"
+# Add help system
+help_button_pressed = handle_help_toggle()
+if help_button_pressed:
+    help_system()
     
-    # This simulates the core functionality of search_interface without the header
-    # The form and other elements that would normally be part of search_interface
-    with st.form(key="search_form", clear_on_submit=False):
-        col1, col2 = st.columns([6, 1])
-        
-        with col1:
-            query = st.text_input(
-                "Enter your question",
-                value=st.session_state.get("current_query", ""),
-                placeholder="e.g., How does the password reset detection rule work?",
-                disabled=st.session_state.loading,
-                key="query_input"
-            )
-        
-        with col2:
-            submit_button = st.form_submit_button(
-                "Search", 
-                disabled=st.session_state.loading,
-                use_container_width=True,
-                type="primary"
-            )
-        
-        # Advanced filters expander (to be implemented)
-        with st.expander("Advanced filters", expanded=False):
-            st.info("Filter the results with Mad Scientist precision.")
-    
-    # Process form submission
-    if submit_button and query and not st.session_state.loading:
-        st.session_state.current_query = query
-        
-        # Add to query history if not already present
-        if "query_history" in st.session_state:
-            if query not in st.session_state.query_history:
-                st.session_state.query_history = [query] + st.session_state.query_history
-                if len(st.session_state.query_history) > 10:  # Limit history size
-                    st.session_state.query_history = st.session_state.query_history[:10]
-        
-        # Call the search callback
-        perform_search(query, {})
-    
-    # Show example queries (moved outside the form)
-    from frontend.config import EXAMPLE_QUERIES
-    with st.expander("Example questions", expanded=False):
-        example_cols = st.columns(2)
-        for i, example in enumerate(EXAMPLE_QUERIES):
-            with example_cols[i % 2]:
-                if st.button(
-                    example, 
-                    key=f"example_{i}",
-                    use_container_width=True,
-                    disabled=st.session_state.loading
-                ):
-                    # Set the example as the current query and trigger search
-                    st.session_state.current_query = example
-                    perform_search(example, {})
-
 # Close the card div
 st.markdown("""</div>""", unsafe_allow_html=True)
 
@@ -630,12 +533,13 @@ if st.session_state.loading:
     """, unsafe_allow_html=True)
 
 # Display results or error
-st.markdown("""<div class="card">""", unsafe_allow_html=True)
-results_display(
-    result=st.session_state.search_results,
-    error=st.session_state.search_error
-)
-st.markdown("""</div>""", unsafe_allow_html=True)
+if not st.session_state.loading:
+    st.markdown("""<div class="card">""", unsafe_allow_html=True)
+    results_display(
+        result=st.session_state.search_results,
+        error=st.session_state.search_error
+    )
+    st.markdown("""</div>""", unsafe_allow_html=True)
 
 # Footer
 st.markdown("""
