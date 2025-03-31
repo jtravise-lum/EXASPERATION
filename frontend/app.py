@@ -7,7 +7,6 @@ import time
 # Import components
 from frontend.components.search_interface import query_history_sidebar, search_interface
 from frontend.components.results_display import results_display
-from frontend.components.help_system import help_system, handle_help_toggle
 from frontend.components.user_preferences import user_preferences
 # Import API client
 from frontend.utils.api_client import api_client
@@ -474,12 +473,7 @@ def perform_search(query: str, filters: Dict[str, Any]):
         st.session_state.loading = False
         debug_container.empty()
 
-# Function to handle filter changes
-    ErrorResponse,
-    SearchResponse
-)
 
-# Logo in sidebar
 with st.sidebar:    
     # Display logo with styled text
     st.markdown("""
@@ -493,7 +487,7 @@ with st.sidebar:
     
 # Display the query history in the sidebar    
 query_history_sidebar()
-    user_preferences()
+user_preferences()
 # Main app layout
 st.write("")
 
@@ -510,11 +504,7 @@ st.markdown("""
 st.markdown("""<div class="card">""", unsafe_allow_html=True)
 search_interface(perform_search)
 
-# Add help system
-help_button_pressed = handle_help_toggle()
-if help_button_pressed:
-    help_system()
-    
+
 # Close the card div
 st.markdown("""</div>""", unsafe_allow_html=True)
 
