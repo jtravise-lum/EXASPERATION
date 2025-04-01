@@ -10,7 +10,7 @@ EXABOMINATION is a Retrieval Augmented Generation (RAG) system designed to make 
 
 ## The Problem
 
-Exabeam's documentation, while comprehensive, can be challenging to navigate. With over 10,000 pages of content covering various data sources, parsers, correlation rules, and use cases, finding specific information can be time-consuming and frustrating. EXASPERATION transforms this "documentation wilderness" into a searchable knowledge base that responds to your queries directly.
+Exabeam's documentation, while comprehensive, can be challenging to navigate. With over 10,000 pages of content covering various data sources, parsers, correlation rules, and use cases, finding specific information can be time-consuming and frustrating. EXABOMINATION transforms this "documentation wilderness" into a searchable knowledge base that responds to your queries directly.
 
 ## Features
 - **Natural Language Queries**: Ask questions in plain English about Exabeam CIM features, configurations, or troubleshooting
@@ -49,7 +49,7 @@ EXABOMINATION uses a modular architecture consisting of:
 
 #### Component Architecture
 
-EXASPERATION consists of two main components that can be run separately:
+EXABOMINATION consists of two main components that can be run separately:
 
 1. **ChromaDB Vector Database** - Runs in Docker
 2. **Embedding and Query Pipeline** - Runs in Python virtual environment
@@ -98,7 +98,7 @@ For local ChromaDB installation (not recommended), set `use_server=False` when i
 
 #### Processing Documents with Enhanced Semantic Chunking
 
-EXASPERATION now features enhanced semantic chunking that significantly improves retrieval quality. Use the ingestion wrapper script for easy document processing:
+EXBOMINATION now features enhanced semantic chunking that significantly improves retrieval quality. Use the ingestion wrapper script for easy document processing:
 
 ```bash
 # Process documents with enhanced semantic chunking (default)
@@ -207,4 +207,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**EXASPERATION**: *Because life's too short to read the manual... entirely.*
+**EXBOMINATION**: *Because life's too short to read the manual... entirely.*
